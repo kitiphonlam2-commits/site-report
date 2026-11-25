@@ -1,0 +1,1392 @@
+<!DOCTYPE html>
+<html lang="th" data-theme="ocean">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ระบบรายงานผู้ควบคุมงานก่อสร้าง V8.1</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root, [data-theme="ocean"] {
+    --hdr-bg: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+    --primary: #1d4ed8; --primary-light: #3b82f6; --primary-soft: #eff6ff;
+    --excel-hdr: linear-gradient(135deg, #15803d, #16a34a);
+    --bg: #f0f6fc; --card: #ffffff; --border: #cbd5e1;
+    --text: #1e293b; --muted: #64748b; --danger: #dc2626;
+    --shadow: 0 4px 12px rgba(30, 58, 138, 0.06);
+  }
+  [data-theme="pastel"] {
+    --hdr-bg: linear-gradient(135deg, #6d28d9 0%, #a855f7 55%, #ec4899 100%);
+    --primary: #7c3aed; --primary-light: #a855f7; --primary-soft: #faf5ff;
+    --excel-hdr: linear-gradient(135deg, #0d9488, #14b8a6);
+    --bg: #fdf8ff; --card: #ffffff; --border: #e9d5ff;
+    --text: #3b0764; --muted: #7e22ce; --danger: #e11d48;
+    --shadow: 0 4px 14px rgba(124, 58, 237, 0.08);
+  }
+  [data-theme="mint"] {
+    --hdr-bg: linear-gradient(135deg, #065f46 0%, #059669 60%, #10b981 100%);
+    --primary: #047857; --primary-light: #10b981; --primary-soft: #ecfdf5;
+    --excel-hdr: linear-gradient(135deg, #0f766e, #0d9488);
+    --bg: #f0fdf7; --card: #ffffff; --border: #a7f3d0;
+    --text: #064e3b; --muted: #047857; --danger: #dc2626;
+    --shadow: 0 4px 12px rgba(6, 95, 70, 0.07);
+  }
+  [data-theme="vintage"] {
+    --hdr-bg: linear-gradient(135deg, #292524 0%, #44403c 60%, #78350f 100%);
+    --primary: #9a3412; --primary-light: #c2410c; --primary-soft: #fff7ed;
+    --excel-hdr: linear-gradient(135deg, #3f6212, #4d7c0f);
+    --bg: #faf7f2; --card: #fffdf9; --border: #d6d3d1;
+    --text: #292524; --muted: #57534e; --danger: #b91c1c;
+    --shadow: 0 4px 12px rgba(41, 37, 36, 0.07);
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Sarabun', 'TH Sarabun New', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; transition: background 0.25s, color 0.25s; }
+
+  /* Password Lock Screen */
+  #authOverlay {
+    position: fixed; inset: 0; z-index: 9999; background: var(--hdr-bg);
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  #authOverlay.hidden { display: none; }
+  .auth-card {
+    background: #fff; width: 100%; max-width: 390px; border-radius: 16px;
+    padding: 28px 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.28); text-align: center;
+  }
+  .auth-icon { font-size: 44px; margin-bottom: 8px; }
+  .auth-card h2 { margin: 0 0 6px; font-size: 19px; color: var(--primary); }
+  .auth-card p { margin: 0 0 18px; color: var(--muted); font-size: 13.5px; }
+  .auth-card input { width: 100%; text-align: center; font-size: 18px; letter-spacing: 3px; padding: 10px; margin-bottom: 12px; }
+  .auth-card button { width: 100%; justify-content: center; padding: 10px; font-size: 15px; }
+  #authError { color: var(--danger); font-size: 13px; margin-top: 10px; min-height: 18px; font-weight: 600; }
+  #appShell.locked { display: none; }
+
+  header { background: var(--hdr-bg); color: #fff; padding: 12px 20px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; box-shadow: 0 3px 10px rgba(0,0,0,0.12); }
+  header h1 { margin: 0; font-size: 19px; }
+  .header-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .save-status { font-size: 12px; background: rgba(255,255,255,0.22); padding: 4px 11px; border-radius: 99px; font-weight: 500; }
+
+  select, input, textarea { font-family: inherit; font-size: 14px; padding: 6px 9px; border: 1px solid var(--border); border-radius: 7px; background: #fff; color: #1e293b; }
+  select:focus, input:focus, textarea:focus { outline: none; border-color: var(--primary-light); box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
+
+  .th-date-wrap { position: relative; display: inline-flex; align-items: center; justify-content: space-between; width: 100%; min-width: 112px; background: #fff; border: 1px solid var(--border); border-radius: 7px; padding: 5px 8px; cursor: pointer; gap: 4px; }
+  .th-date-wrap:hover { border-color: var(--primary-light); background: var(--primary-soft); }
+  .th-date-txt { font-size: 13.5px; font-weight: 600; color: #1e293b; white-space: nowrap; }
+  .th-date-ico { font-size: 13px; opacity: 0.7; }
+  .th-date-wrap input[type="date"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: none; padding: 0; margin: 0; }
+  table.excel-table .th-date-wrap, table.data-table .th-date-wrap { padding: 3px 6px; border-radius: 5px; }
+  table.excel-table .th-date-txt, table.data-table .th-date-txt { font-size: 12.5px; }
+
+  .btn { font-family: inherit; font-size: 14px; font-weight: 600; padding: 6px 13px; border: none; border-radius: 7px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+  .btn:hover { opacity: 0.92; }
+  .btn-primary { background: var(--primary-light); color: #fff; }
+  .btn-success { background: #16a34a; color: #fff; }
+  .btn-excel { background: #15803d; color: #fff; }
+  .btn-sky { background: #0284c7; color: #fff; }
+  .btn-warning { background: #d97706; color: #fff; }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-outline { background: #fff; color: #334155; border: 1px solid var(--border); }
+  .btn-sm { padding: 4px 9px; font-size: 13px; }
+
+  nav.tabs { background: #fff; border-bottom: 1px solid var(--border); padding: 8px 16px; display: flex; overflow-x: auto; gap: 6px; }
+  nav.tabs button { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 99px; padding: 7px 14px; font-family: inherit; font-size: 13.5px; font-weight: 600; color: #475569; cursor: pointer; white-space: nowrap; }
+  nav.tabs button.active { color: #fff; border-color: transparent; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+  nav.tabs button[data-color="blue"].active { background: #2563eb; }
+  nav.tabs button[data-color="teal"].active { background: #0d9488; }
+  nav.tabs button[data-color="green"].active { background: #16a34a; }
+  nav.tabs button[data-color="amber"].active { background: #d97706; }
+  nav.tabs button[data-color="rose"].active { background: #e11d48; }
+  nav.tabs button[data-color="purple"].active { background: #7c3aed; }
+  nav.tabs button[data-color="slate"].active { background: #475569; }
+
+  main { max-width: 1520px; margin: 16px auto; padding: 0 14px 40px; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; margin-bottom: 16px; box-shadow: var(--shadow); }
+  .card h2 { margin: 0 0 12px; font-size: 16.5px; color: var(--primary); border-bottom: 2px solid var(--primary-soft); padding-bottom: 8px; }
+  .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 13px; font-weight: 600; color: var(--muted); }
+
+  .audit-panel { border-radius: 10px; padding: 12px 16px; margin-bottom: 14px; display: none; }
+  .audit-panel.show { display: block; }
+  .audit-pass { background: #dcfce7; border: 1px solid #86efac; color: #166534; }
+  .audit-fail { background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; }
+  .audit-item { padding: 4px 0; border-bottom: 1px dashed rgba(0,0,0,0.1); font-size: 13.5px; }
+  .audit-item:last-child { border-bottom: none; }
+
+  /* Calendar */
+  .cal-legend { display: flex; flex-wrap: wrap; gap: 8px; font-size: 12.5px; margin-bottom: 12px; }
+  .cal-legend span { padding: 3px 10px; border-radius: 6px; font-weight: 600; }
+  .cal-months-wrap { display: flex; flex-direction: column; gap: 18px; width: 100%; }
+  .cal-month { width: 100%; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: #fff; box-shadow: var(--shadow); }
+  .cal-month-hdr { background: var(--hdr-bg); color: #fff; padding: 9px 14px; font-weight: 700; font-size: 16px; text-align: center; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+  .cal-dow { background: #f1f5f9; color: #334155; font-weight: 700; text-align: center; padding: 7px 4px; font-size: 13px; border-bottom: 1px solid var(--border); }
+  .cal-dow.wknd { color: #dc2626; background: #fee2e2; }
+  .cal-cell { min-height: 96px; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; padding: 5px; font-size: 12px; display: flex; flex-direction: column; gap: 3px; cursor: pointer; }
+  .cal-cell:hover { background: var(--primary-soft) !important; outline: 2px solid var(--primary-light); z-index: 2; }
+  .cal-cell.empty { background: #f8fafc; cursor: default; }
+  .cal-cell.wknd { background: #fff5f5; }
+  .cal-cell.holiday { background: #fee2e2; }
+  .cal-cell.in-contract { box-shadow: inset 0 3px 0 var(--primary-light); }
+  .cal-day-num { font-weight: 700; font-size: 13.5px; }
+  .cal-cell.wknd .cal-day-num, .cal-cell.holiday .cal-day-num { color: #dc2626; }
+  .cal-tag { padding: 2px 6px; border-radius: 4px; font-size: 11.5px; line-height: 1.25; white-space: normal; word-break: break-word; }
+  .tag-hol { background: #ef4444; color: #fff; }
+  .tag-mile { background: #f59e0b; color: #fff; font-weight: 600; }
+  .tag-done { background: #16a34a; color: #fff; font-weight: 600; }
+  .tag-phase { background: #dbeafe; color: #1e40af; border-left: 3px solid #2563eb; }
+  .tag-daily { background: #dcfce7; color: #166534; border-left: 3px solid #16a34a; }
+  .tag-test { background: #0284c7; color: #fff; font-weight: 600; }
+
+  /* Modal */
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); z-index: 999; display: none; align-items: center; justify-content: center; padding: 16px; }
+  .modal-backdrop.open { display: flex; }
+  .modal-box { background: #fff; width: 100%; max-width: 740px; border-radius: 14px; box-shadow: 0 20px 40px rgba(0,0,0,0.25); overflow: hidden; }
+  .modal-hdr { background: var(--hdr-bg); color: #fff; padding: 13px 18px; display: flex; justify-content: space-between; align-items: center; }
+  .modal-hdr h3 { margin: 0; font-size: 16px; }
+  .modal-body { padding: 16px; max-height: 78vh; overflow-y: auto; }
+  .modal-ftr { padding: 12px 16px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+
+  .alert-box { padding: 9px 13px; border-radius: 8px; font-size: 13px; margin-bottom: 10px; }
+  .alert-ok { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+  .alert-warn { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+
+  .weather-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; background: #e0f2fe; border: 1px solid #7dd3fc; padding: 9px 14px; border-radius: 8px; margin-bottom: 10px; }
+  .excel-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; max-height: 70vh; overflow-y: auto; }
+  table.excel-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 1460px; }
+  table.excel-table thead th { position: sticky; top: 0; z-index: 5; background: var(--excel-hdr); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 8px 5px; text-align: center; font-weight: 600; }
+  table.excel-table td { border: 1px solid #e2e8f0; padding: 3px; background: #fff; }
+  table.excel-table tr.week-divider td { background: var(--primary-soft) !important; color: var(--primary); font-weight: 700; padding: 7px 10px; border-top: 2px solid var(--primary-light); }
+  table.excel-table tr.row-milestone td { background: #fef9c3 !important; }
+  table.excel-table tr.row-test td { background: #e0f2fe !important; }
+  table.excel-table input:not([type="date"]) { width: 100%; border: 1px solid transparent; background: transparent; padding: 4px 5px; font-size: 13px; border-radius: 4px; }
+
+  .combo-box { display: flex; align-items: center; width: 100%; gap: 3px; }
+  .combo-box input { flex: 1; min-width: 0; }
+  .combo-box select { width: 26px; padding: 3px 0; border: 1px solid #cbd5e1; background: #f1f5f9; cursor: pointer; border-radius: 5px; flex-shrink: 0; font-size: 12px; }
+  .combo-box .btn-add-opt { width: 25px; height: 28px; padding: 0; border: 1px solid #86efac; background: #dcfce7; color: #166534; font-weight: 700; border-radius: 5px; cursor: pointer; flex-shrink: 0; }
+
+  table.data-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  table.data-table th, table.data-table td { border: 1px solid var(--border); padding: 6px 7px; text-align: left; }
+  table.data-table th { background: var(--primary-soft); color: var(--primary); }
+  table.data-table input:not([type="date"]), table.data-table select { width: 100%; padding: 4px 6px; font-size: 13px; }
+  table.data-table .combo-box select { width: 24px; padding: 3px 0; }
+
+  .mem-bar-bg { width: 100%; height: 14px; background: #e2e8f0; border-radius: 99px; overflow: hidden; margin: 6px 0; }
+  .mem-bar-fill { height: 100%; background: var(--primary-light); transition: width 0.3s; }
+  .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
+  .photo-card { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: #fff; }
+  .photo-card img { width: 100%; height: 145px; object-fit: cover; display: block; }
+  .photo-card .caption { padding: 8px; font-size: 12.5px; display: flex; flex-direction: column; gap: 6px; }
+  .doc-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 14px; background: var(--primary-soft); border: 1px solid var(--border); padding: 10px 14px; border-radius: 10px; }
+
+  /* --- THAI GOVERNMENT SARABAN A4 STANDARD --- */
+  @page { size: A4 portrait; margin: 15mm 20mm 15mm 30mm; }
+  .a4-page {
+    background: #fff !important; width: 210mm; min-height: 297mm; margin: 0 auto 20px;
+    padding: 15mm 20mm 15mm 30mm; box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    font-family: 'TH Sarabun New', 'TH SarabunPSK', 'Sarabun', sans-serif;
+    font-size: 16pt; line-height: 1.25; color: #000 !important; page-break-after: always; position: relative;
+  }
+  .a4-page:last-child { page-break-after: auto; }
+  .a4-page h3 { margin: 0 0 8px; font-size: 18pt; font-weight: 700; color: #000; }
+  .a4-page table { width: 100%; border-collapse: collapse; font-size: 15pt; color: #000; }
+  .a4-page table.bordered th, .a4-page table.bordered td { border: 1px solid #000; padding: 3px 5px; vertical-align: top; }
+  .a4-page .doc-title { text-align: center; font-size: 22pt; font-weight: 700; margin-bottom: 10px; }
+
+  .a4-page.memo-single { height: 297mm; overflow: hidden; font-size: 14.5pt; line-height: 1.15; page-break-inside: avoid; break-inside: avoid; }
+  .a4-page.memo-single table { font-size: 14pt; line-height: 1.13; }
+  .a4-page.memo-single .memo-header { display: flex; align-items: flex-end; margin-bottom: 3px; }
+  .a4-page.memo-single .memo-garuda { width: 14mm; height: 14mm; flex-shrink: 0; }
+  .a4-page.memo-single .memo-title { flex: 1; text-align: center; font-size: 26pt; font-weight: 700; padding-right: 14mm; line-height: 0.9; }
+  .a4-page.memo-single .saraban-lbl { font-size: 18pt; font-weight: 700; }
+  .a4-page.memo-single .memo-row-2col { display: flex; width: 100%; margin: 1px 0; align-items: baseline; }
+  .a4-page.memo-single .memo-col-left { width: 50%; }
+  .a4-page.memo-single .memo-col-right { width: 50%; }
+  .a4-page.memo-single .memo-indent { text-indent: 25mm; margin: 5px 0; }
+  .a4-page.memo-single .memo-sig-right { width: 50%; margin-left: 50%; text-align: center; margin-top: 6px; }
+  .a4-page.memo-single .com-grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 1px 10px; margin: 2px 0 5px; font-size: 13.5pt; }
+  .a4-page .center { text-align: center; }
+  .a4-page .right { text-align: right; }
+
+  /* ป้ายโครงการสีน้ำเงิน */
+  .a4-page .blue-sign {
+    background: #1e3a8a !important; color: #fff !important;
+    border: 4px solid #fff; outline: 3px solid #1e3a8a; padding: 18px;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .a4-page .blue-sign table td { color: #fff !important; padding: 5px; }
+
+  @media print {
+    body { background: #fff !important; }
+    #authOverlay, header, nav.tabs, .no-print, .doc-toolbar, .modal-backdrop, .audit-panel { display: none !important; }
+    main { max-width: none; margin: 0; padding: 0; }
+    .tab-panel { display: none !important; }
+    #tab-report { display: block !important; }
+    .a4-page { width: auto; min-height: auto; margin: 0; padding: 0; box-shadow: none; }
+    .a4-page.memo-single { height: 265mm; max-height: 265mm; overflow: hidden; }
+  }
+</style>
+</head>
+<body>
+
+<!-- PASSWORD LOCK SCREEN -->
+<div id="authOverlay">
+  <div class="auth-card">
+    <div class="auth-icon">🔐</div>
+    <h2>ระบบรายงานผู้ควบคุมงานก่อสร้าง</h2>
+    <p>กรุณากรอกรหัสผ่านเพื่อเข้าใช้งานโปรแกรม</p>
+    <input type="password" id="authPassInput" placeholder="กรอกรหัสผ่าน" onkeydown="if(event.key==='Enter') checkLogin();">
+    <button type="button" class="btn btn-primary" onclick="checkLogin()">🔓 เข้าสู่ระบบ</button>
+    <div id="authError"></div>
+  </div>
+</div>
+
+<div id="appShell" class="locked">
+<header class="no-print">
+  <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+    <h1>🏗️ ระบบรายงานผู้ควบคุมงาน V8.1</h1>
+    <span class="save-status" id="saveStatus">กำลังโหลด...</span>
+  </div>
+  <div class="header-actions">
+    <select id="themeSelector" onchange="applyTheme(this.value)" style="background:rgba(255,255,255,0.95); font-weight:600;">
+      <option value="ocean">💎 ธีมฟ้าสดใส</option>
+      <option value="pastel">🌸 พาสเทลเกาหลี</option>
+      <option value="mint">🌿 มินต์ธรรมชาติ</option>
+      <option value="vintage">📐 วินเทจช่าง</option>
+    </select>
+    <select id="projectSelector" onchange="switchProject(this.value)" style="max-width:210px;"></select>
+    <label class="btn btn-warning btn-sm" style="margin:0;">
+      📥 นำเข้า CSV <input type="file" accept=".csv" style="display:none" onchange="importProjectCSV(event)">
+    </label>
+    <button class="btn btn-success btn-sm" onclick="manualSave()">💾 บันทึก</button>
+    <button class="btn btn-outline btn-sm" onclick="createNewProject()">+ ใหม่</button>
+    <button class="btn btn-danger btn-sm" onclick="lockApp()" title="ล็อกหน้าจอ">🔒 ล็อก</button>
+  </div>
+</header>
+
+<nav class="tabs no-print">
+  <button class="active" data-color="blue" onclick="openTab('tab-info', this)">📋 1. ข้อมูลสัญญา & ขยายเวลา</button>
+  <button data-color="teal" onclick="openTab('tab-timeline', this)">📅 2. ปฏิทินไทม์ไลน์</button>
+  <button data-color="green" onclick="openTab('tab-excel', this)">🗓️ 3. ป้อนรายวัน & BOQ สัปดาห์</button>
+  <button data-color="amber" onclick="openTab('tab-other', this)">📊 4. รายเดือน / ทดสอบ / ปัญหา</button>
+  <button data-color="rose" onclick="openTab('tab-photos', this)">📷 5. ภาพถ่าย & แผนที่</button>
+  <button data-color="purple" onclick="openTab('tab-report', this)">🖨️ 6. ออกเอกสาร & ตรวจ สตง.</button>
+  <button data-color="slate" onclick="openTab('tab-memory', this)">💾 หน่วยความจำ & รหัสผ่าน</button>
+</nav>
+
+<main>
+  <!-- TAB 1: PROJECT INFO -->
+  <section id="tab-info" class="tab-panel active">
+    <div class="card">
+      <h2>1. ข้อมูลเกี่ยวกับงานและกำหนดวันตามสัญญา (แสดงวันที่ พ.ศ.)</h2>
+      <div class="grid-2">
+        <div class="field"><label>1.1 ผู้ว่าจ้าง</label><input id="p_employer" onchange="saveInfo()"></div>
+        <div class="field"><label>ผู้ออกแบบ</label><input id="p_designer" onchange="saveInfo()"></div>
+        <div class="field"><label>ผู้รับจ้าง</label><input id="p_contractor" onchange="saveInfo()"></div>
+        <div class="field"><label>สถานที่ตั้งผู้รับจ้าง</label><input id="p_contractorAddr" onchange="saveInfo()"></div>
+        <div class="field"><label>1.2 ชื่อสัญญา / โครงการ</label><input id="p_name" onchange="saveInfo()"></div>
+        <div class="field"><label>สถานที่ก่อสร้าง</label><input id="p_location" onchange="saveInfo()"></div>
+      </div>
+      <div class="field" style="margin-top:8px;"><label>ปริมาณงาน / ลักษณะงาน</label><textarea id="p_scope" rows="3" onchange="saveInfo()"></textarea></div>
+      <div class="grid-4" style="margin-top:8px;">
+        <div class="field"><label>สัญญาจ้างเลขที่</label><input id="p_contractNo" onchange="saveInfo()"></div>
+        <div class="field"><label>วันที่ลงนามสัญญา (พ.ศ.)</label><input type="date" id="p_contractDate" onchange="saveInfo()"></div>
+        <div class="field"><label>เริ่มสัญญาจ้าง (พ.ศ.)</label><input type="date" id="p_startDate" onchange="calcEndDate();saveInfo();"></div>
+        <div class="field"><label>วันส่งมอบพื้นที่ (พ.ศ.)</label><input type="date" id="p_handoverDate" onchange="saveInfo()"></div>
+        <div class="field"><label>ระยะเวลาก่อสร้าง (วัน)</label><input type="number" id="p_duration" onchange="calcEndDate();saveInfo();"></div>
+        <div class="field"><label>สิ้นสุดสัญญาจ้าง (พ.ศ.)</label><input type="date" id="p_endDate" onchange="saveInfo()"></div>
+        <div class="field"><label>ราคาค่าก่อสร้าง (บาท)</label><input type="number" id="p_budget" onchange="saveInfo()"></div>
+        <div class="field"><label>ค่าปรับวันละ (บาท)</label><input type="number" id="p_penalty" onchange="saveInfo()"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>⚖️ ข้อมูลทางกฎหมาย: คำสั่งแต่งตั้ง / การขยายสัญญา / หนังสือแจ้งเร่งรัดงาน</h2>
+      <div class="grid-3">
+        <div class="field"><label>เลขที่คำสั่งแต่งตั้งผู้ควบคุมงาน/กรรมการฯ</label><input id="p_orderNo" placeholder="เช่น 535/2569" onchange="saveInfo()"></div>
+        <div class="field"><label>ลงวันที่คำสั่งแต่งตั้ง (พ.ศ.)</label><input type="date" id="p_orderDate" onchange="saveInfo()"></div>
+        <div class="field"><label>เลขที่บันทึกขยายสัญญา (ถ้ามี)</label><input id="p_extendNo" placeholder="-" onchange="saveInfo()"></div>
+        <div class="field"><label>ขยายสัญญาถึงวันที่ (พ.ศ.)</label><input type="date" id="p_extendDate" onchange="saveInfo()"></div>
+        <div class="field"><label>เลขที่หนังสือแจ้งเร่งรัดงาน (ถ้าช้ากว่าแผน)</label><input id="p_accelNo" placeholder="-" onchange="saveInfo()"></div>
+        <div class="field"><label>วันที่แจ้งเร่งรัดงาน (พ.ศ.)</label><input type="date" id="p_accelDate" onchange="saveInfo()"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>1.4 คณะกรรมการตรวจรับพัสดุ & 1.5 ผู้ควบคุมงาน</h2>
+      <div class="grid-3">
+        <div class="field">
+          <label>ผู้ควบคุมงาน (พิมพ์ / ▼ / +)</label>
+          <div class="combo-box">
+            <input id="p_supervisor" onchange="saveInfo()">
+            <select id="supPresetSel" onchange="pickStaff(this.value, 'p_supervisor', 'p_supervisorPos'); this.value='';"></select>
+            <button type="button" class="btn-add-opt" onclick="saveStaffPreset('p_supervisor','p_supervisorPos')">+</button>
+          </div>
+        </div>
+        <div class="field"><label>ตำแหน่งผู้ควบคุมงาน</label><input id="p_supervisorPos" onchange="saveInfo()"></div>
+        <div class="field"><label>ผู้แทนผู้รับจ้าง</label><input id="p_contractorRep" onchange="saveInfo()"></div>
+      </div>
+      <div id="committeeList" class="grid-2" style="margin-top:12px;"></div>
+    </div>
+
+    <div class="card">
+      <h2>🦅 ตั้งค่าตราครุฑหัวบันทึกข้อความ</h2>
+      <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+        <input type="file" accept="image/*" onchange="uploadGaruda(event)">
+        <button type="button" class="btn btn-outline btn-sm" onclick="resetGaruda()">ใช้ครุฑมาตรฐานของระบบ</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB 2: TIMELINE -->
+  <section id="tab-timeline" class="tab-panel">
+    <div class="card">
+      <h2>⚡ กำหนดวันแล้วเสร็จ & ช่วงเวลาทำงาน</h2>
+      <div id="timelineAlerts"></div>
+      <div style="background:#f0fdf4; border:1px solid #86efac; padding:10px 12px; border-radius:8px; margin-bottom:12px; display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
+        <label style="font-weight:700; color:#166534;">✅ วันแล้วเสร็จ / ส่งมอบงาน (พ.ศ.):</label>
+        <div style="width:160px;"><input type="date" id="tl_finishDate" onchange="saveFinishDate(this.value)"></div>
+        <button type="button" class="btn btn-outline btn-sm" onclick="saveFinishDate('')">ล้างวันแล้วเสร็จ</button>
+      </div>
+
+      <div class="grid-4" style="margin-bottom:8px;">
+        <div class="field"><label>ตั้งแต่วันที่ (พ.ศ.)</label><input type="date" id="ph_from"></div>
+        <div class="field"><label>ถึงวันที่ (พ.ศ.)</label><input type="date" id="ph_to"></div>
+        <div class="field"><label>เนื้องานที่ดำเนินการ (▼ / +)</label>
+          <div class="combo-box">
+            <input id="ph_work" placeholder="เช่น - งานเกรดบดอัดแน่นพื้นทางเดิม">
+            <select id="phWorkSel" onchange="if(this.value){document.getElementById('ph_work').value=this.value;this.value='';}"></select>
+            <button type="button" class="btn-add-opt" onclick="savePhWorkPreset()">+</button>
+          </div>
+        </div>
+        <div class="field"><label>ปริมาณงาน / % จบช่วง</label>
+          <div style="display:flex; gap:4px;"><input id="ph_vol" placeholder="เช่น ยาว 150 ม./วัน" style="flex:1;"><input type="number" id="ph_pct" style="width:65px;" min="0" max="100" value="50"></div>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-bottom:10px;">
+        <div class="field">
+          <label>เครื่องจักรหลักในช่วงนี้ (▼ / +)</label>
+          <div class="combo-box">
+            <input id="ph_machine" placeholder="เช่น รถเกรดเดอร์">
+            <select id="phMachineSel" onchange="if(this.value){document.getElementById('ph_machine').value=this.value;this.value='';}"></select>
+            <button type="button" class="btn-add-opt" onclick="saveModalPreset('machine','ph_machine')">+</button>
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
+          <button type="button" class="btn btn-primary btn-sm" onclick="addPhase()">+ เพิ่มช่วงการทำงาน</button>
+          <button type="button" class="btn btn-excel" onclick="applyTimelineToDailyLogs()">⚡ สร้างบันทึกทุกวันตามปฏิทิน</button>
+          <button type="button" class="btn btn-sky" onclick="fetchRealWeatherForAllDays()">🌦️ ดึงสภาพอากาศจริงทุกวัน</button>
+        </div>
+      </div>
+
+      <div style="overflow-x:auto;">
+        <table class="data-table" id="phaseTable">
+          <thead><tr><th style="width:135px;">ตั้งแต่วันที่</th><th style="width:135px;">ถึงวันที่</th><th>เนื้องานที่ทำ</th><th style="width:150px;">ปริมาณงาน/วัน</th><th style="width:200px;">เครื่องจักรหลัก</th><th style="width:75px;">% จบช่วง</th><th style="width:55px;">ลบ</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>📅 ปฏิทินไทม์ไลน์ภาพรวมเต็มระยะเวลาสัญญา — <span style="color:var(--primary-light); font-size:14px;">(👆 คลิกที่ช่องวันที่เพื่อป้อนงาน/คำสั่งผู้คุมงาน/ทดสอบวัสดุ)</span></h2>
+      <div class="cal-legend">
+        <span style="background:#fff; border:1px solid #cbd5e1; border-top:3px solid var(--primary-light);">🟦 ช่วงสัญญา</span>
+        <span style="background:#fee2e2; color:#dc2626; border:1px solid #fca5a5;">🔴 วันหยุดราชการ/ส-อา</span>
+        <span style="background:#f59e0b; color:#fff;">🟠 แจ้งเข้างาน/ส่งมอบพื้นที่</span>
+        <span style="background:#dcfce7; color:#166534; border-left:3px solid #16a34a;">🟢 บันทึกจริงรายวัน</span>
+        <span style="background:#dbeafe; color:#1e40af; border-left:3px solid #2563eb;">🔵 แผนช่วงปฏิบัติงาน</span>
+        <span style="background:#0284c7; color: #fff;">🧪 วันทดสอบวัสดุ</span>
+      </div>
+      <div class="cal-months-wrap" id="calendarTimeline"></div>
+    </div>
+  </section>
+
+  <!-- TAB 3: BOQ + CONTINUOUS EXCEL TABLE -->
+  <section id="tab-excel" class="tab-panel">
+    <div class="card">
+      <h2>📊 ตารางสัดส่วนผลงาน (BOQ %) — เชื่อมโยงอัตโนมัติทุกสัปดาห์ & รายเดือน</h2>
+      <div style="background:var(--primary-soft); border:1px solid var(--border); padding:10px 12px; border-radius:8px; margin-bottom:10px; display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between;">
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <strong style="color:var(--primary);">เลือกสัปดาห์:</strong>
+          <select id="boqWeekSel" onchange="renderBoq()"></select>
+        </div>
+        <div id="boqWeekSummaryBadge" style="font-weight:700; color:#166534; font-size:14.5px;"></div>
+      </div>
+
+      <div class="grid-3" style="margin-bottom:8px;">
+        <div class="field" style="grid-column:span 2;">
+          <label>เพิ่มรายการงานหลัก BOQ (▼ / +)</label>
+          <div class="combo-box">
+            <input id="b_name" placeholder="เช่น งานพื้นทางหินคลุก" onkeydown="if(event.key==='Enter') addBoq();">
+            <select id="boqPresetSel" onchange="if(this.value){document.getElementById('b_name').value=this.value;this.value='';}"></select>
+            <button type="button" class="btn-add-opt" onclick="saveBoqPreset()">+</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>ค่างานตามสัญญา (บาท)</label>
+          <div style="display:flex; gap:6px;">
+            <input type="number" id="b_cost" placeholder="0" onkeydown="if(event.key==='Enter') addBoq();">
+            <button type="button" class="btn btn-primary btn-sm" onclick="addBoq()">+ เพิ่มงาน</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="overflow-x:auto;">
+        <table class="data-table" style="margin-top:8px;" id="boqTable">
+          <thead>
+            <tr>
+              <th style="width:45px;">ที่</th><th>รายการงาน</th><th style="width:120px;">ค่างาน (บาท)</th>
+              <th style="width:85px;">สัดส่วน (%)</th><th style="width:100px;">ถึงสัปดาห์ก่อน (%)</th>
+              <th style="width:110px; background:#dcfce7; color:#166534;">ในสัปดาห์นี้ (%) ✏️</th>
+              <th style="width:90px;">สะสม (%)</th><th style="width:100px;">ผลงานรวม (%)</th><th style="width:55px;">ลบ</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="weather-bar">
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <strong style="color:#0369a1;">🌦️ สภาพอากาศจริง (Open-Meteo):</strong>
+          <label style="font-size:13px;">Lat:</label><input type="number" step="0.001" id="w_lat" style="width:82px;" value="14.736" onchange="saveCoords()">
+          <label style="font-size:13px;">Lon:</label><input type="number" step="0.001" id="w_lon" style="width:82px;" value="102.387" onchange="saveCoords()">
+          <button type="button" class="btn btn-sky btn-sm" onclick="fetchRealWeatherForAllDays()">🔄 ดึงสภาพอากาศจริงทุกวัน</button>
+        </div>
+        <span id="weatherStatus" style="font-size:12.5px; color:#0369a1; font-weight:600;">พิกัดเริ่มต้น: อ.หนองบุญมาก จ.นครราชสีมา</span>
+      </div>
+
+      <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between; margin-bottom:10px;">
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <strong style="color:var(--primary);">ตารางบันทึกการทำงานรายวัน (มีช่องคำสั่งผู้ควบคุมงาน):</strong>
+          <select id="weekFilterSel" onchange="renderContinuousExcel()"></select>
+          <button class="btn btn-excel btn-sm" onclick="addNewWeek()">+ เพิ่มสัปดาห์ถัดไป</button>
+        </div>
+      </div>
+
+      <div class="excel-wrap">
+        <table class="excel-table">
+          <thead>
+            <tr>
+              <th style="width:55px;">วัน</th><th style="width:120px;">วันที่ (พ.ศ.)</th>
+              <th style="width:240px;">บันทึกการทำงาน (▼ / +)</th><th style="width:135px;">ปริมาณงานวันนี้</th>
+              <th style="width:185px;">เครื่องจักร (▼ / +)</th><th style="width:45px;">จำนวน</th>
+              <th style="width:45px;">หน.</th><th style="width:45px;">ช่าง</th><th style="width:45px;">คนงาน</th>
+              <th style="width:140px;">สภาพอากาศ (▼ / +)</th>
+              <th style="width:210px; background:#0369a1;">คำสั่ง/ข้อเสนอแนะผู้คุมงาน (▼ / +)</th>
+            </tr>
+          </thead>
+          <tbody id="excelGridBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB 4: MONTHLY / INST / TESTS / ISSUES -->
+  <section id="tab-other" class="tab-panel">
+    <div class="card">
+      <h2>ตั้งค่ารายงานประจำเดือน (คำนวณยอด % อัตโนมัติจากตาราง BOQ รายสัปดาห์)</h2>
+      <div class="grid-3">
+        <div class="field"><label>เลือกเดือนที่ต้องการออกรายงาน</label>
+          <select id="m_month" onchange="saveMonthly()">
+            <option value="0">มกราคม</option><option value="1">กุมภาพันธ์</option><option value="2">มีนาคม</option><option value="3">เมษายน</option>
+            <option value="4">พฤษภาคม</option><option value="5">มิถุนายน</option><option value="6">กรกฎาคม</option><option value="7">สิงหาคม</option>
+            <option value="8">กันยายน</option><option value="9">ตุลาคม</option><option value="10">พฤศจิกายน</option><option value="11">ธันวาคม</option>
+          </select>
+        </div>
+        <div class="field"><label>ปี พ.ศ.</label><input id="m_year" onchange="saveMonthly()"></div>
+        <div class="field">
+          <label>สรุปผลงานประจำเดือน (คำนวณอัตโนมัติ)</label>
+          <div id="monthlyAutoSummary" style="padding:6px 10px; background:#dcfce7; color:#166534; border:1px solid #86efac; border-radius:7px; font-weight:700;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>3. รายละเอียดงวดงานและการตรวจรับงาน</h2>
+      <div class="grid-4" style="margin-bottom:8px;">
+        <div class="field"><label>งวดที่</label><input type="number" id="inst_no" value="1"></div>
+        <div class="field"><label>จำนวนเงิน (บาท)</label><input type="number" id="inst_amt" value="313000"></div>
+        <div class="field"><label>วันที่แล้วเสร็จ (พ.ศ.)</label><input type="date" id="inst_done"></div>
+        <div class="field"><label>วันที่ตรวจรับ (พ.ศ.)</label><input type="date" id="inst_inspect"></div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="addInstallment()">+ เพิ่มงวดงาน</button>
+      <table class="data-table" style="margin-top:8px;" id="instTable">
+        <thead><tr><th style="width:70px;">งวดที่</th><th style="width:140px;">จำนวนเงิน</th><th style="width:150px;">วันที่แล้วเสร็จ</th><th style="width:150px;">วันที่ตรวจรับ</th><th style="width:60px;">ลบ</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>4. ผลการทดสอบวัสดุ & ขออนุมัติใช้วัสดุ</h2>
+      <div class="grid-4">
+        <div class="field">
+          <label>4.1 รายการทดสอบวัสดุ (▼ / +)</label>
+          <div class="combo-box">
+            <input id="t_item" placeholder="เช่น ทดสอบคุณสมบัติหินคลุก">
+            <select id="tItemPresetSel" onchange="if(this.value){document.getElementById('t_item').value=this.value;this.value='';}"></select>
+            <button type="button" class="btn-add-opt" onclick="saveModalPreset('testItem','t_item')">+</button>
+          </div>
+        </div>
+        <div class="field"><label>จำนวน / วันที่ทดสอบ (พ.ศ.)</label><div style="display:flex;gap:4px;"><input type="number" id="t_qty" value="1" style="width:55px;"><div style="flex:1;"><input type="date" id="t_date"></div></div></div>
+        <div class="field">
+          <label>หน่วยงานที่ทดสอบ (▼ / +)</label>
+          <div class="combo-box">
+            <input id="t_lab" value="วิทยาลัยเทคนิคสุรนารี">
+            <select id="tLabPresetSel" onchange="if(this.value){document.getElementById('t_lab').value=this.value;this.value='';}"></select>
+            <button type="button" class="btn-add-opt" onclick="saveModalPreset('lab','t_lab')">+</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>เลขที่ใบผลทดสอบ / ผลการทดสอบ</label>
+          <div style="display:flex;gap:4px;">
+            <input id="t_ref" placeholder="เลขที่ Cert" style="width:105px;">
+            <div class="combo-box" style="flex:1;">
+              <input id="t_res" value="ผ่าน">
+              <select id="tResPresetSel" onchange="if(this.value){document.getElementById('t_res').value=this.value;this.value='';}"></select>
+            </div>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-sm" style="margin-top:8px;" onclick="addTest()">+ เพิ่มผลทดสอบ</button>
+      <div style="overflow-x:auto;">
+        <table class="data-table" style="margin-top:8px; min-width:920px;" id="testTable">
+          <thead><tr><th>รายการทดสอบ (▼ / +)</th><th style="width:60px;">จำนวน</th><th style="width:135px;">วันที่ทดสอบ</th><th style="width:200px;">หน่วยงานที่ทดสอบ (▼ / +)</th><th style="width:130px;">เลขที่ใบรายงานผล</th><th style="width:130px;">ผล (▼ / +)</th><th style="width:50px;">ลบ</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="grid-3" style="margin-top:16px;">
+        <div class="field">
+          <label>4.2 รายการขออนุมัติใช้วัสดุ (▼ / +)</label>
+          <div class="combo-box">
+            <input id="a_item" placeholder="เช่น หินคลุก">
+            <select id="aItemPresetSel" onchange="if(this.value){document.getElementById('a_item').value=this.value;this.value='';}"></select>
+            <button type="button" class="btn-add-opt" onclick="saveModalPreset('testItem','a_item')">+</button>
+          </div>
+        </div>
+        <div class="field"><label>วันที่ขออนุมัติ (พ.ศ.)</label><input type="date" id="a_date"></div>
+        <div class="field"><label>ผู้พิจารณา / ผล</label><div style="display:flex;gap:4px;"><input id="a_by" value="คณะกรรมการตรวจรับพัสดุ"><select id="a_res" style="width:100px;"><option>เห็นชอบ</option><option>รอพิจารณา</option></select></div></div>
+      </div>
+      <button class="btn btn-primary btn-sm" style="margin-top:8px;" onclick="addApproval()">+ เพิ่มขออนุมัติ</button>
+      <table class="data-table" style="margin-top:8px;" id="approvalTable">
+        <thead><tr><th>รายการขออนุมัติ</th><th style="width:145px;">วันที่ขออนุมัติ</th><th style="width:220px;">ผู้พิจารณา</th><th style="width:115px;">ผล</th><th style="width:55px;">ลบ</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>5. ปัญหา / อุปสรรคในการก่อสร้าง</h2>
+      <div class="grid-3">
+        <div class="field" style="grid-column:span 2;"><label>ปัญหา - อุปสรรค - การแก้ไข</label><input id="is_desc" placeholder="ระบุปัญหาและแนวทางแก้ไข..."></div>
+        <div class="field"><label>หมายเหตุ / การดำเนินการ</label>
+          <select id="is_action"><option>แจ้งผู้รับจ้างดำเนินการ</option><option>รายงานประธานตรวจการจ้าง</option><option>แจ้งผู้รับจ้างและรายงานประธานฯ</option></select>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-sm" style="margin-top:6px;" onclick="addIssue()">+ เพิ่มปัญหาอุปสรรค</button>
+      <table class="data-table" style="margin-top:8px;" id="issueTable">
+        <thead><tr><th>ที่</th><th>ปัญหา - อุปสรรค - การแก้ไข</th><th>หมายเหตุ</th><th>ลบ</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- TAB 5: PHOTOS & MAP -->
+  <section id="tab-photos" class="tab-panel">
+    <div class="card">
+      <h2>📷 อัปโหลดภาพถ่ายหน้างาน (เลือกพร้อมกันได้หลายรูป)</h2>
+      <div class="grid-3">
+        <div class="field"><label>สัปดาห์ที่</label><input type="number" id="ph_week" min="1" value="1"></div>
+        <div class="field"><label>คำอธิบายเริ่มต้น</label><input id="ph_caption" placeholder="เช่น งานลงหินคลุกและบดอัด"></div>
+        <div class="field"><label>เลือกไฟล์ภาพ</label><input type="file" id="ph_multi" accept="image/*" multiple onchange="uploadMultiplePhotos(event)"></div>
+      </div>
+      <div id="uploadProgress" style="margin-top:6px; color:#16a34a; font-weight:600;"></div>
+      <div class="photo-grid" id="photoGallery" style="margin-top:12px;"></div>
+    </div>
+    <div class="card">
+      <h2>🗺️ แผนที่แสดงที่ตั้งโครงการ</h2>
+      <input type="file" accept="image/*" onchange="uploadMap(event)">
+      <div id="mapPreview" style="margin-top:10px;"></div>
+    </div>
+  </section>
+
+  <!-- TAB 6: REPORTS -->
+  <section id="tab-report" class="tab-panel">
+    <div class="doc-toolbar no-print">
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <label style="font-weight:600;">เลือกเอกสาร:</label>
+        <select id="reportType" onchange="renderReport()">
+          <option value="bundle_all">🖨️ พิมพ์ทั้งหมดของโครงการ (ปก + ข้อมูล + ทุกสัปดาห์ + รายเดือน + แผนที่ + ป้าย)</option>
+          <option value="bundle_all_weeks">📑 พิมพ์รวมทุกสัปดาห์ (สัปดาห์ที่ 1 ถึงสุดท้าย)</option>
+          <option value="bundle_monthly">📚 รวมเล่มรายงานประจำเดือน (ปก + หัวข้อ 1-6 + แผนที่)</option>
+          <option value="bundle_weekly">📄 รวมเล่มเฉพาะสัปดาห์ที่เลือก (บันทึก + ผลงาน + รายวัน + ภาพ)</option>
+          <option value="cover">หน้าปก</option>
+          <option value="info">หัวข้อ 1: ข้อมูลเกี่ยวกับงาน</option>
+          <option value="weekly_memo">บันทึกข้อความประจำสัปดาห์ (1 หน้า A4)</option>
+          <option value="weekly_progress">ผลการดำเนินงานในสัปดาห์ (BOQ %)</option>
+          <option value="daily_log">บันทึกการปฏิบัติงานของผู้รับจ้าง (รายวัน 3 ตาราง)</option>
+          <option value="monthly_memo">บันทึกข้อความประจำเดือน (1 หน้า A4)</option>
+          <option value="monthly_progress">หัวข้อ 2: ผลการดำเนินงานประจำเดือน (BOQ %)</option>
+          <option value="installments">หัวข้อ 3: รายละเอียดงวดงาน</option>
+          <option value="tests">หัวข้อ 4: ผลการทดสอบ / ขออนุมัติใช้วัสดุ</option>
+          <option value="issues">หัวข้อ 5-6: ปัญหาอุปสรรค และสรุปผลการดำเนินงาน</option>
+          <option value="photos">ภาพถ่ายประกอบการรายงาน (พร้อมช่องลงนาม)</option>
+          <option value="map">แผนที่แสดงที่ตั้งโครงการ</option>
+          <option value="signs">ป้ายโครงการสีน้ำเงิน / ป้ายประชาสัมพันธ์</option>
+        </select>
+        <label style="font-weight:600;">สัปดาห์ที่:</label>
+        <select id="reportWeek" onchange="renderReport()"></select>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn btn-warning" onclick="runPreAuditCheck()">🔍 ตรวจสุขภาพรายงาน (Pre-Audit)</button>
+        <button class="btn btn-primary" onclick="window.print()">🖨️ พิมพ์ / บันทึก PDF</button>
+        <button class="btn btn-success" onclick="exportToWord()">📄 ส่งออก Word (.doc)</button>
+      </div>
+    </div>
+
+    <div id="auditResultPanel" class="audit-panel no-print"></div>
+    <div id="reportContainer"></div>
+  </section>
+
+  <!-- TAB 7: MEMORY & PASSWORD -->
+  <section id="tab-memory" class="tab-panel">
+    <div class="card">
+      <h2>🔐 ตั้งค่ารหัสผ่านเข้าใช้งานโปรแกรม</h2>
+      <div class="grid-3">
+        <div class="field"><label>รหัสผ่านเดิม</label><input type="password" id="pw_old" placeholder="ค่าเริ่มต้น: 1234"></div>
+        <div class="field"><label>รหัสผ่านใหม่</label><input type="password" id="pw_new" placeholder="ตั้งรหัสผ่านใหม่"></div>
+        <div style="display:flex; align-items:flex-end; gap:8px;">
+          <button type="button" class="btn btn-primary" onclick="changePassword()">💾 เปลี่ยนรหัสผ่าน</button>
+          <button type="button" class="btn btn-danger btn-sm" onclick="lockApp()">🔒 ล็อกหน้าจอทันที</button>
+        </div>
+      </div>
+      <div style="margin-top:6px; font-size:12.5px; color:var(--muted);">
+        💡 หากต้องการเปลี่ยนรหัสผ่านเริ่มต้นสำหรับทุกคนที่เปิดผ่านเว็บไซต์ ให้แก้ไขค่า <code>const DEFAULT_PASS = '4321';</code> ในไฟล์ HTML ก่อนอัปโหลดขึ้นเว็บ
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>💾 สถานะหน่วยความจำ & นำเข้า/สำรองข้อมูล</h2>
+      <div id="memoryStats">กำลังตรวจสอบพื้นที่...</div>
+      <div class="mem-bar-bg"><div class="mem-bar-fill" id="memBarFill" style="width:0%"></div></div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+        <label class="btn btn-warning btn-sm" style="margin:0;">
+          📥 นำเข้าโครงการจาก CSV <input type="file" accept=".csv" style="display:none" onchange="importProjectCSV(event)">
+        </label>
+        <button class="btn btn-primary btn-sm" onclick="exportJSON()">⬇️ สำรองข้อมูลทั้งหมด (JSON)</button>
+        <label class="btn btn-outline btn-sm" style="margin:0;">
+          ⬆️ นำเข้าไฟล์สำรอง (JSON) <input type="file" accept=".json" style="display:none" onchange="importJSON(event)">
+        </label>
+      </div>
+    </div>
+    <div class="card">
+      <h2>📂 รายการโครงการทั้งหมดที่บันทึกไว้</h2>
+      <table class="data-table" id="projectMemoryTable">
+        <thead><tr><th>ชื่อโครงการ</th><th>สัญญาเลขที่</th><th>จำนวนสัปดาห์</th><th>ภาพถ่าย</th><th>บันทึกล่าสุด</th><th>จัดการ</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+</div>
+
+<!-- POPUP MODAL -->
+<div class="modal-backdrop no-print" id="dayModal" onclick="if(event.target===this) closeDayModal();">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <h3 id="modalDateTitle">📅 บันทึกการทำงานประจำวัน</h3>
+      <button type="button" class="btn btn-sm" style="background:rgba(255,255,255,0.2); color:#fff;" onclick="closeDayModal()">✕ ปิด</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="m_isoDate">
+      <div class="field" style="margin-bottom:10px;">
+        <label>รายละเอียดการปฏิบัติงาน (▼ / +)</label>
+        <div class="combo-box">
+          <input id="m_work"><select id="m_workSel" onchange="if(this.value){document.getElementById('m_work').value=this.value;this.value='';}"></select>
+          <button type="button" class="btn-add-opt" onclick="saveModalPreset('work','m_work')">+</button>
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:10px;">
+        <label>คำสั่ง / ข้อเสนอแนะของผู้ควบคุมงาน (▼ / +)</label>
+        <div class="combo-box">
+          <input id="m_order" placeholder="เช่น กำชับบดอัดให้ได้ความแน่นตามแบบ...">
+          <select id="m_orderSel" onchange="if(this.value){document.getElementById('m_order').value=this.value;this.value='';}"></select>
+          <button type="button" class="btn-add-opt" onclick="saveModalPreset('order','m_order')">+</button>
+        </div>
+      </div>
+      <div class="grid-2" style="margin-bottom:10px;">
+        <div class="field"><label>ปริมาณงานวันนี้</label><input id="m_volume"></div>
+        <div class="field"><label>สภาพอากาศ (▼ / +)</label><div class="combo-box"><input id="m_weather"><select id="m_weatherSel" onchange="if(this.value){document.getElementById('m_weather').value=this.value;this.value='';}"></select><button type="button" class="btn-add-opt" onclick="saveModalPreset('weather','m_weather')">+</button></div></div>
+      </div>
+      <div class="grid-2" style="margin-bottom:10px;">
+        <div class="field"><label>เครื่องจักร (▼ / +)</label><div class="combo-box"><input id="m_machine"><select id="m_machineSel" onchange="if(this.value){document.getElementById('m_machine').value=this.value;this.value='';}"></select><button type="button" class="btn-add-opt" onclick="saveModalPreset('machine','m_machine')">+</button></div></div>
+        <div class="field"><label>จำนวนเครื่องจักร (คัน)</label><input id="m_qty"></div>
+      </div>
+      <div class="grid-3" style="margin-bottom:12px;">
+        <div class="field"><label>หัวหน้าคนงาน</label><input id="m_foreman"></div>
+        <div class="field"><label>ช่าง</label><input id="m_tech"></div>
+        <div class="field"><label>กรรมกร/คนงาน</label><input id="m_labor"></div>
+      </div>
+      <div style="background:#f0f9ff; border:1px solid #7dd3fc; padding:10px; border-radius:8px; margin-bottom:10px;">
+        <div style="font-weight:700; font-size:13px; margin-bottom:6px; color:#0369a1;">🧪 การทดสอบวัสดุในวันนี้:</div>
+        <div id="m_dayTestsList" style="margin-bottom:8px;"></div>
+        <div class="grid-3">
+          <div class="combo-box"><input id="m_testItem" placeholder="รายการทดสอบ..."><select id="m_testItemSel" onchange="if(this.value){document.getElementById('m_testItem').value=this.value;this.value='';}"></select><button type="button" class="btn-add-opt" onclick="saveModalPreset('testItem','m_testItem')">+</button></div>
+          <div class="combo-box"><input id="m_testLab" value="วิทยาลัยเทคนิคสุรนารี"><select id="m_testLabSel" onchange="if(this.value){document.getElementById('m_testLab').value=this.value;this.value='';}"></select><button type="button" class="btn-add-opt" onclick="saveModalPreset('lab','m_testLab')">+</button></div>
+          <div style="display:flex; gap:4px;"><div class="combo-box" style="flex:1;"><input id="m_testRes" value="ผ่าน"><select id="m_testResSel" onchange="if(this.value){document.getElementById('m_testRes').value=this.value;this.value='';}"></select></div><button type="button" class="btn btn-sky btn-sm" onclick="addTestFromModal()">+ เพิ่ม</button></div>
+        </div>
+      </div>
+      <div style="display:flex; gap:6px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-warning btn-sm" onclick="setQuickMilestone('handover')">📍 ตั้งเป็นวันส่งมอบพื้นที่</button>
+        <button type="button" class="btn btn-success btn-sm" onclick="setQuickMilestone('finish')">✅ ตั้งเป็นวันแล้วเสร็จ/ส่งมอบงาน</button>
+      </div>
+    </div>
+    <div class="modal-ftr">
+      <button type="button" class="btn btn-outline" onclick="closeDayModal()">ยกเลิก</button>
+      <button type="button" class="btn btn-primary" onclick="saveDayModal()">💾 บันทึกข้อมูลวันนี้</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// --- PASSWORD AUTH SYSTEM (เปลี่ยนรหัสผ่านเริ่มต้นตรงนี้ก่อนอัปโหลดขึ้นเว็บ) ---
+const DEFAULT_PASS = '4321';
+const PASS_STORAGE_KEY = 'smart_site_app_pass_v8';
+const AUTH_SESSION_KEY = 'smart_site_authed_v8';
+
+function getCurrentPass() {
+  try { return localStorage.getItem(PASS_STORAGE_KEY) || DEFAULT_PASS; } catch { return DEFAULT_PASS; }
+}
+function checkAuthOnLoad() {
+  try {
+    if (sessionStorage.getItem(AUTH_SESSION_KEY) === '1') {
+      document.getElementById('authOverlay').classList.add('hidden');
+      document.getElementById('appShell').classList.remove('locked');
+      return;
+    }
+  } catch {}
+  document.getElementById('authPassInput').focus();
+}
+function checkLogin() {
+  const inp = document.getElementById('authPassInput').value;
+  if (inp === getCurrentPass()) {
+    try { sessionStorage.setItem(AUTH_SESSION_KEY, '1'); } catch {}
+    document.getElementById('authOverlay').classList.add('hidden');
+    document.getElementById('appShell').classList.remove('locked');
+    document.getElementById('authError').textContent = '';
+    document.getElementById('authPassInput').value = '';
+  } else {
+    document.getElementById('authError').textContent = '❌ รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่';
+    document.getElementById('authPassInput').select();
+  }
+}
+function lockApp() {
+  try { sessionStorage.removeItem(AUTH_SESSION_KEY); } catch {}
+  document.getElementById('appShell').classList.add('locked');
+  document.getElementById('authOverlay').classList.remove('hidden');
+  document.getElementById('authPassInput').value = '';
+  document.getElementById('authPassInput').focus();
+}
+function changePassword() {
+  const oldPw = document.getElementById('pw_old').value;
+  const newPw = document.getElementById('pw_new').value.trim();
+  if (oldPw !== getCurrentPass()) return alert('รหัสผ่านเดิมไม่ถูกต้อง');
+  if (newPw.length < 4) return alert('รหัสผ่านใหม่ต้องมีอย่างน้อย 4 ตัวอักษร');
+  try { localStorage.setItem(PASS_STORAGE_KEY, newPw); } catch {}
+  document.getElementById('pw_old').value = '';
+  document.getElementById('pw_new').value = '';
+  alert('✅ เปลี่ยนรหัสผ่านเรียบร้อยแล้ว');
+}
+
+const THAI_MONTHS_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const THAI_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const THAI_DAYS_SHORT = ['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'];
+
+function formatThaiBE(d) {
+  if (!d || d === '-') return '- เลือกวันที่ -';
+  const parts = d.split('-').map(Number);
+  if (parts.length !== 3 || isNaN(parts[0])) return '- เลือกวันที่ -';
+  return `${parts[2]} ${THAI_MONTHS_SHORT[parts[1] - 1]} ${parts[0] + 543}`;
+}
+
+function upgradeDateInputs(root = document) {
+  root.querySelectorAll('input[type="date"]').forEach(inp => {
+    if (!inp.parentElement.classList.contains('th-date-wrap')) {
+      const wrap = document.createElement('div'); wrap.className = 'th-date-wrap';
+      const txt = document.createElement('span'); txt.className = 'th-date-txt';
+      const ico = document.createElement('span'); ico.className = 'th-date-ico'; ico.textContent = '📅';
+      inp.parentNode.insertBefore(wrap, inp);
+      wrap.appendChild(txt); wrap.appendChild(ico); wrap.appendChild(inp);
+      inp.addEventListener('click', () => { try { inp.showPicker(); } catch {} });
+      inp.addEventListener('change', () => { txt.textContent = formatThaiBE(inp.value); });
+    }
+    const txtEl = inp.parentElement.querySelector('.th-date-txt');
+    if (txtEl) txtEl.textContent = formatThaiBE(inp.value);
+  });
+}
+
+// --- PRE-AUDIT CHECKER ---
+function runPreAuditCheck() {
+  const p = getProj(), flags = [], toN = v => isNaN(Number(v)) ? 0 : Number(v);
+  if (p.handoverDate && p.startDate && p.handoverDate < p.startDate) flags.push({ level: 'red', msg: `วันส่งมอบพื้นที่ (${formatThaiBE(p.handoverDate)}) อยู่ก่อนวันเริ่มสัญญา (${formatThaiBE(p.startDate)})` });
+  if (!p.orderNo || p.orderNo === '-') flags.push({ level: 'yellow', msg: 'ยังไม่ได้ระบุ "เลขที่คำสั่งแต่งตั้งผู้ควบคุมงาน/คณะกรรมการฯ" ในแท็บ 1' });
+  (p.weeks || []).forEach(w => {
+    const wSum = getWeekBoqSummary(p, w.weekNo), lastD = w.days.length ? w.days[w.days.length - 1].date : p.startDate, planPct = getWeekPlannedPct(p, w, lastD);
+    if (planPct - wSum.totalAccW > 10 && (!p.accelNo || p.accelNo === '-')) flags.push({ level: 'yellow', msg: `สัปดาห์ที่ ${w.weekNo}: ผลงาน (${wSum.totalAccW.toFixed(1)}%) ช้ากว่าแผน (${planPct.toFixed(1)}%) เกิน 10% แต่ยังไม่ได้ระบุเลขที่หนังสือแจ้งเร่งรัดงาน` });
+    w.days.forEach(d => {
+      const work = d.work || '', weather = d.weather || '', hasMach = (d.machine && d.machine !== '-' && toN(d.qty) > 0), hasLabor = (toN(d.foreman) + toN(d.tech) + toN(d.labor)) > 0;
+      if (weather.includes('ฝนตกหนัก') && (work.includes('บดอัด') || work.includes('เทผิวทาง') || work.includes('คอนกรีต') || work.includes('ลาดยาง') || work.includes('หินคลุก'))) flags.push({ level: 'red', msg: `วันที่ ${formatThaiBE(d.date)} (สัปดาห์ ${w.weekNo}): สภาพอากาศ "${weather}" แต่บันทึกทำงาน "${work}"` });
+      if ((work.includes('ยังไม่เข้าดำเนินการ') || work.includes('หยุดงาน')) && (hasMach || hasLabor)) flags.push({ level: 'red', msg: `วันที่ ${formatThaiBE(d.date)} (สัปดาห์ ${w.weekNo}): ระบุ "${work}" แต่ยังมีเครื่องจักรหรือแรงงานค้างอยู่` });
+    });
+  });
+  (p.tests || []).forEach(t => { if (!t.refNo || t.refNo === '-') flags.push({ level: 'yellow', msg: `ผลทดสอบ "${t.item}" ยังไม่ได้ระบุ "เลขที่ใบรายงานผลทดสอบ"` }); });
+  const panel = document.getElementById('auditResultPanel'); panel.classList.add('show');
+  if (flags.length === 0) { panel.className = 'audit-panel show audit-pass no-print'; panel.innerHTML = `<strong>✅ ผ่านการตรวจสอบเบื้องต้น (Pre-Audit Check):</strong> ไม่พบข้อขัดแย้งของข้อมูล พร้อมสั่งพิมพ์ส่งคณะกรรมการฯ ได้ทันที`; }
+  else { panel.className = 'audit-panel show audit-fail no-print'; panel.innerHTML = `<strong>⚠️ พบประเด็นที่ควรตรวจสอบก่อนพิมพ์ (${flags.length} รายการ):</strong>` + flags.map(f => `<div class="audit-item">${f.level === 'red' ? '🔴 <b>[สำคัญ]</b>' : '🟡 <b>[แนะนำ]</b>'} ${f.msg}</div>`).join(''); }
+}
+
+// --- BOQ & PLANNED % ENGINE ---
+function getWeekPlannedPct(p, wObj, rawLastDate) {
+  if (wObj && wObj.plannedPct !== undefined && wObj.plannedPct !== '' && wObj.plannedPct !== null) return Number(wObj.plannedPct);
+  const totDays = p.duration || 60, elapsed = Math.max(1, Math.round((new Date(rawLastDate) - new Date(p.startDate)) / 86400000) + 1);
+  return Math.min(100, (elapsed / totDays) * 100);
+}
+function getWeekBoqSummary(p, weekNo) {
+  const boq = p.boq || [], totCost = boq.reduce((s, x) => s + (Number(x.cost) || 0), 0) || 1;
+  let totalPrevW = 0, totalInW = 0, totalAccW = 0;
+  const rows = boq.map(item => {
+    const weight = ((Number(item.cost) || 0) * 100) / totCost; let prev = 0, inW = 0;
+    (p.weeks || []).forEach(w => { const val = Number((w.boqPct && w.boqPct[item.id]) || 0); if (w.weekNo < weekNo) prev += val; else if (w.weekNo === weekNo) inW += val; });
+    const acc = Math.min(100, prev + inW), weightedAcc = (acc * weight) / 100;
+    totalPrevW += (prev * weight) / 100; totalInW += (inW * weight) / 100; totalAccW += weightedAcc;
+    return { ...item, weight, prev, inW, acc, weightedAcc };
+  });
+  return { rows, totalPrevW, totalInW, totalAccW };
+}
+function getMonthBoqSummary(p, monthIdx, yearBE) {
+  const boq = p.boq || [], totCost = boq.reduce((s, x) => s + (Number(x.cost) || 0), 0) || 1;
+  const targetYM = `${Number(yearBE) - 543}-${String(Number(monthIdx) + 1).padStart(2, '0')}`;
+  let totalPrevM = 0, totalInM = 0, totalAccM = 0;
+  const rows = boq.map(item => {
+    const weight = ((Number(item.cost) || 0) * 100) / totCost; let prev = 0, inM = 0;
+    (p.weeks || []).forEach(w => { const lastD = w.days && w.days.length ? w.days[w.days.length - 1].date : '', wYM = lastD ? lastD.slice(0, 7) : '', val = Number((w.boqPct && w.boqPct[item.id]) || 0); if (wYM && wYM < targetYM) prev += val; else if (wYM === targetYM) inM += val; });
+    const acc = Math.min(100, prev + inM), weightedAcc = (acc * weight) / 100;
+    totalPrevM += (prev * weight) / 100; totalInM += (inM * weight) / 100; totalAccM += weightedAcc;
+    return { ...item, weight, prev, inM, acc, weightedAcc };
+  });
+  return { rows, totalPrevM, totalInM, totalAccM };
+}
+function updateWeekBoqPct(weekNo, boqId, rawVal) {
+  const p = getProj(), w = p.weeks.find(x => x.weekNo === weekNo); if (!w) return;
+  if (!w.boqPct) w.boqPct = {}; w.boqPct[boqId] = Math.max(0, Math.min(100, Number(rawVal) || 0));
+  saveStorage(`อัปเดตผลงาน BOQ สัปดาห์ที่ ${weekNo}`); renderBoq(); renderContinuousExcel(); updateMonthlyAutoSummary();
+}
+function updateMonthlyAutoSummary() {
+  const p = getProj(); if (!p) return;
+  const sum = getMonthBoqSummary(p, Number(p.monthly.monthIdx ?? 8), Number(p.monthly.year) || 2569);
+  const el = document.getElementById('monthlyAutoSummary');
+  if (el) el.textContent = `ถึงเดือนก่อน ${sum.totalPrevM.toFixed(2)}% | ในเดือนนี้ ${sum.totalInM.toFixed(2)}% | สะสม ${sum.totalAccM.toFixed(2)}%`;
+}
+
+// --- CSV IMPORTER ---
+function parseCSV(text) {
+  const rows = []; let row = [], val = '', inQuotes = false; const clean = text.replace(/^\uFEFF/, '');
+  for (let i = 0; i < clean.length; i++) {
+    const ch = clean[i], next = clean[i + 1];
+    if (inQuotes) { if (ch === '"' && next === '"') { val += '"'; i++; } else if (ch === '"') inQuotes = false; else val += ch; }
+    else { if (ch === '"') inQuotes = true; else if (ch === ',') { row.push(val); val = ''; } else if (ch === '\r' && next === '\n') { row.push(val); rows.push(row); row = []; val = ''; i++; } else if (ch === '\n' || ch === '\r') { row.push(val); rows.push(row); row = []; val = ''; } else val += ch; }
+  }
+  if (val !== '' || row.length > 0) { row.push(val); rows.push(row); }
+  return rows.filter(r => r.some(c => c.trim() !== ''));
+}
+function normalizeCSVDate(str) {
+  if (!str) return ''; const m = str.trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) { let y = Number(m[1]); if (y >= 2400) y -= 543; return `${y}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`; }
+  return '';
+}
+function findStaffPos(name) {
+  if (!name) return ''; const clean = name.replace(/\s+/g, ' ').trim();
+  const hit = (presets.staff || []).find(s => s.name.replace(/\s+/g, ' ').trim() === clean || clean.includes(s.name.split(' ')[0]));
+  return hit ? hit.pos : '';
+}
+async function importProjectCSV(event) {
+  const file = event.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async e => {
+    try {
+      const rows = parseCSV(e.target.result); if (rows.length < 2) return alert('ไม่พบข้อมูลในไฟล์ CSV');
+      const headers = rows[0].map(h => h.trim()), getVal = (r, key) => { const idx = headers.indexOf(key); return idx >= 0 ? (r[idx] || '').trim() : ''; };
+      let importedCount = 0;
+      for (let i = 1; i < rows.length; i++) {
+        const r = rows[i], name = getVal(r, 'ชื่อโครงการ'); if (!name) continue;
+        const budget = Number(getVal(r, 'วงเงินตามสัญญา') || getVal(r, 'วงเงินงบประมาณ')) || 0;
+        const rawPen = Number(getVal(r, 'อัตราค่าปรับต่อวัน(บาท)')) || 0;
+        const penalty = (rawPen > 0 && rawPen <= 10) ? Math.round((budget * rawPen) / 100) : Math.round(rawPen);
+        const startDate = normalizeCSVDate(getVal(r, 'วันเริ่มสัญญา')) || new Date().toISOString().slice(0,10);
+        const endDate = normalizeCSVDate(getVal(r, 'วันสิ้นสุดสัญญา')) || startDate;
+        const finishDate = normalizeCSVDate(getVal(r, 'วันส่งมอบงาน')), contractDate = normalizeCSVDate(getVal(r, 'วันลงนามสัญญา'));
+        const orderDate = normalizeCSVDate(getVal(r, 'วันที่คำสั่ง')), accelDate = normalizeCSVDate(getVal(r, 'วันที่เร่งรัด'));
+        const duration = Number(getVal(r, 'จำนวนวันก่อสร้าง(วัน)')) || 60, supName = getVal(r, 'ผู้ควบคุมงาน') || 'นายกิตติ พลแหลม';
+        const comStr = getVal(r, 'คณะกรรมการตรวจรับ'), committees = [];
+        if (comStr) comStr.split('|').forEach(part => { const seg = part.trim(); if (!seg) return; const cIdx = seg.indexOf(':'), role = cIdx >= 0 ? seg.slice(0, cIdx).trim() : 'กรรมการฯ', cname = cIdx >= 0 ? seg.slice(cIdx + 1).trim() : seg; committees.push({ name: cname, role, pos: findStaffPos(cname) }); });
+        while (committees.length < 5) committees.push({ name: '', role: 'กรรมการฯ', pos: '' });
+        const newProj = {
+          id: getVal(r, 'ID') || ('proj_' + Date.now() + '_' + i), updatedAt: new Date().toLocaleString('th-TH'),
+          lat: 14.736, lon: 102.387, customGaruda: '', name,
+          location: name.includes('หมู่ที่') ? name.replace(/^ก่อสร้าง[^บ]*/, '').trim() + ' ตำบลหนองหัวแรต อำเภอหนองบุญมาก จังหวัดนครราชสีมา' : 'ตำบลหนองหัวแรต อำเภอหนองบุญมาก จังหวัดนครราชสีมา',
+          employer: 'เทศบาลตำบลหนองหัวแรต', contractor: getVal(r, 'ผู้รับจ้าง(รายการที่1)') || '-', contractorAddr: '-', designer: 'นายกิตติ พลแหลม',
+          scope: getVal(r, 'เป้าหมาย').replace(/\n+/g, ' '), contractNo: getVal(r, 'เลขที่สัญญา') || '-',
+          contractDate, startDate, handoverDate: startDate, finishDate, duration, endDate, budget, penalty,
+          orderNo: getVal(r, 'เลขที่คำสั่ง') || '-', orderDate, extendNo: '-', extendDate: '', accelNo: '-', accelDate,
+          supervisor: supName, supervisorPos: findStaffPos(supName) || 'ผู้อำนวยการกองช่าง',
+          contractorRep: '-', committees: committees.slice(0, 5), phases: [],
+          weeks: [makeWeekDays(1, startDate, finishDate || endDate)], boq: [],
+          monthly: { monthIdx: new Date(startDate).getMonth(), year: getVal(r, 'ปีงบประมาณ') || '2569' },
+          installments: [{ id: Date.now() + i, no: 1, amt: budget, done: finishDate, inspect: '' }],
+          tests: [], approvals: [], issues: [], photos: [], mapImage: ''
+        };
+        const ex = projects.findIndex(x => x.id === newProj.id);
+        if (ex >= 0) projects[ex] = newProj; else projects.push(newProj);
+        currentProjectId = newProj.id; importedCount++;
+      }
+      event.target.value = '';
+      if (importedCount > 0) {
+        await saveStorage(`นำเข้า CSV สำเร็จ ${importedCount} โครงการ`);
+        renderProjectSelector(); loadProjectUI(); renderMemoryTab();
+        openTab('tab-info', document.querySelectorAll('nav.tabs button')[0]);
+        alert(`✅ นำเข้าข้อมูลโครงการจาก CSV สำเร็จ ${importedCount} โครงการเรียบร้อยแล้วครับ!`);
+      } else alert('ไม่พบคอลัมน์ "ชื่อโครงการ" ในไฟล์ CSV');
+    } catch (err) { alert('เกิดข้อผิดพลาด: ' + err.message); }
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function applyTheme(t) { document.documentElement.setAttribute('data-theme', t); document.getElementById('themeSelector').value = t; try { localStorage.setItem('smart_site_theme', t); } catch {} }
+(function() { try { const t = localStorage.getItem('smart_site_theme'); if (t) applyTheme(t); } catch {} })();
+
+const DEFAULT_GARUDA_SVG = `<svg viewBox="0 0 120 120" class="memo-garuda" xmlns="http://www.w3.org/2000/svg"><g fill="#000"><path d="M60 8 L65 20 L60 18 L55 20 Z"/><circle cx="60" cy="27" r="7"/><path d="M53 26 C40 20 18 22 6 36 C16 34 26 36 33 41 C20 40 12 46 8 55 C18 50 28 50 36 53 C26 56 20 62 18 70 C28 63 38 61 46 62 L52 46 Z"/><path d="M67 26 C80 20 102 22 114 36 C104 34 94 36 87 41 C100 40 108 46 112 55 C102 50 92 50 84 53 C94 56 100 62 102 70 C92 63 82 61 74 62 L68 46 Z"/><path d="M51 36 L69 36 L66 64 L54 64 Z"/><path d="M54 65 L44 82 L34 86 L40 92 L51 85 L56 72 Z"/><path d="M66 65 L76 82 L86 86 L80 92 L69 85 L64 72 Z"/><path d="M56 68 L60 98 L64 68 Z"/><path d="M46 94 L60 112 L74 94 L60 101 Z"/></g></svg>`;
+function getGarudaHtml(p) { return p.customGaruda ? `<img src="${p.customGaruda}" class="memo-garuda" style="object-fit:contain;">` : DEFAULT_GARUDA_SVG; }
+
+const FIXED_HOLIDAY_NAMES = { '01-01':'วันขึ้นปีใหม่','04-06':'วันจักรี','04-13':'วันสงกรานต์','04-14':'วันสงกรานต์','04-15':'วันสงกรานต์','05-04':'วันฉัตรมงคล','06-03':'วันเฉลิมฯ พระราชินี','07-28':'วันเฉลิมฯ ร.10','08-12':'วันแม่แห่งชาติ','10-13':'วันนวมินทรมหาราช','10-23':'วันปิยมหาราช','12-05':'วันพ่อแห่งชาติ','12-10':'วันรัฐธรรมนูญ','12-31':'วันสิ้นปี' };
+const SPECIFIC_HOLIDAY_NAMES = { '2025-02-12':'วันมาฆบูชา','2025-05-11':'วันวิสาขบูชา','2025-05-12':'ชดเชยวิสาขบูชา','2025-07-10':'วันอาสาฬหบูชา','2025-07-11':'วันเข้าพรรษา','2026-03-03':'วันมาฆบูชา','2026-05-11':'วันพืชมงคล','2026-05-31':'วันวิสาขบูชา','2026-06-01':'ชดเชยวิสาขบูชา','2026-07-29':'วันอาสาฬหบูชา','2026-07-30':'วันเข้าพรรษา','2027-02-21':'วันมาฆบูชา','2027-02-22':'ชดเชยมาฆบูชา','2027-05-20':'วันวิสาขบูชา','2027-07-18':'วันอาสาฬหบูชา','2027-07-19':'วันเข้าพรรษา','2027-07-20':'ชดเชยเข้าพรรษา' };
+function getHolidayName(isoDate) { if (!isoDate) return ''; return SPECIFIC_HOLIDAY_NAMES[isoDate] || FIXED_HOLIDAY_NAMES[isoDate.slice(5)] || ''; }
+function isThaiHolidayOrWeekend(d) { if (d.getDay()===0||d.getDay()===6) return true; return !!getHolidayName(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`); }
+function getNextWorkingDay(dateStr) { if (!dateStr||dateStr==='-') return dateStr; const d=new Date(dateStr+'T00:00:00'); while(isThaiHolidayOrWeekend(d)) d.setDate(d.getDate()+1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+
+function classifyDayWeather(hourlyRain, dailyCode) {
+  let m=0, a=0, e=0;
+  for(let h=6;h<12;h++) m+=(hourlyRain[h]||0); for(let h=12;h<17;h++) a+=(hourlyRain[h]||0); for(let h=17;h<23;h++) e+=(hourlyRain[h]||0);
+  const tot=m+a+e;
+  if(tot>=0.4){ const lbl=tot>=10?'ฝนตกหนัก':(tot>=3?'ฝนตก':'ฝนตกเล็กน้อย'), mx=Math.max(m,a,e); if(mx===m&&m>a+e) return `${lbl} (เช้า)`; if(mx===a&&a>m+e) return `${lbl} (บ่าย)`; if(mx===e&&e>m+a) return `${lbl} (เย็น)`; return lbl; }
+  if(dailyCode>=51) return 'ฝนตกเล็กน้อย'; if(dailyCode===3||dailyCode===45||dailyCode===48) return 'มืดครึ้ม'; return 'แจ่มใส';
+}
+async function fetchRealWeatherForAllDays() {
+  const p=getProj(); if(!p||!p.weeks||!p.weeks.length) return alert('ยังไม่มีข้อมูลสัปดาห์');
+  const lat=Number(p.lat)||14.736, lon=Number(p.lon)||102.387, allDays=p.weeks.flatMap(w=>w.days).filter(d=>d.date); if(!allDays.length) return;
+  const dates=allDays.map(d=>d.date).sort(), minDate=dates[0], maxDate=dates[dates.length-1], todayStr=new Date().toISOString().slice(0,10);
+  const statusEl=document.getElementById('weatherStatus'); if(statusEl) statusEl.textContent='⏳ กำลังดึงสภาพอากาศจริง...';
+  const wMap={};
+  try {
+    if(minDate<=todayStr){ const res=await fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${minDate}&end_date=${maxDate<todayStr?maxDate:todayStr}&hourly=precipitation&daily=weather_code&timezone=Asia%2FBangkok`); if(res.ok){ const d=await res.json(); if(d.daily?.time) d.daily.time.forEach((dt,i)=>wMap[dt]=classifyDayWeather(d.hourly.precipitation.slice(i*24,(i+1)*24),d.daily.weather_code[i])); } }
+    if(maxDate>=todayStr){ const res2=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=precipitation&daily=weather_code&timezone=Asia%2FBangkok&past_days=3&forecast_days=14`); if(res2.ok){ const d2=await res2.json(); if(d2.daily?.time) d2.daily.time.forEach((dt,i)=>wMap[dt]=classifyDayWeather(d2.hourly.precipitation.slice(i*24,(i+1)*24),d2.daily.weather_code[i])); } }
+    let cnt=0; p.weeks.forEach(w=>w.days.forEach(d=>{ if(wMap[d.date]){ d.weather=wMap[d.date]; cnt++; } }));
+    await saveStorage(`อัปเดตสภาพอากาศจริง ${cnt} วัน`); renderContinuousExcel();
+    if(statusEl) statusEl.textContent=`✅ อัปเดตสภาพอากาศจริงสำเร็จ ${cnt} วัน`; alert(`ดึงสภาพอากาศจริงสำเร็จ ${cnt} วัน`);
+  } catch { if(statusEl) statusEl.textContent='❌ เชื่อมต่ออินเทอร์เน็ตไม่ได้'; alert('ไม่สามารถดึงข้อมูลสภาพอากาศได้'); }
+}
+function saveCoords() { const p=getProj(); p.lat=Number(document.getElementById('w_lat').value)||14.736; p.lon=Number(document.getElementById('w_lon').value)||102.387; saveStorage('บันทึกพิกัดแล้ว'); }
+
+const DEFAULT_PRESETS = {
+  work: ['- แจ้งเข้าดำเนินการ','- ส่งมอบพื้นที่','- ยังไม่เข้าดำเนินการ','- งานขุดรื้อคันทางเดิมแล้วบดทับแน่น','- งานเกรดบดอัดแน่นพื้นทางเดิม','- ลงหินคลุก ปรับเกลี่ย','- งานเกรดบดอัดแน่นพื้นทางหินคลุก','- ทดสอบความหนาแน่นพื้นทางเดิม','- ทดสอบความหนาแน่นชั้นหินคลุก','- ลงทรายรองพื้นทาง ตั้งแบบปรับระดับ','- เทผิวทางปอร์ตแลนด์ซีเมนต์คอนกรีต','- บ่มคอนกรีต','- ถอดแบบ หยอดยางรอยต่อเผื่อขยายและหดตัว','- หยุดงาน (ฝนตก)','- โครงการแล้วเสร็จ ส่งมอบงาน'],
+  order: ['-','กำชับบดอัดให้ได้ความแน่นตามแบบ','ให้ติดตั้งป้ายเตือนความปลอดภัยระหว่างก่อสร้าง','ตรวจสอบแนวเขตทางและระดับหลังแบบ','ให้เก็บตัวอย่างคอนกรีตทดสอบกำลังอัด','เร่งรัดการดำเนินงานให้เป็นไปตามแผน','ให้บ่มคอนกรีตอย่างต่อเนื่องตามมาตรฐาน','ให้ปรับปรุงความสะอาดและความเรียบร้อยหน้างาน'],
+  machine: ['-','รถแทรคเตอร์ตีนตะขาบ','รถเกรดเดอร์','รถตักดินล้อยาง','รถตักตีนตะขาบ','รถขุดตีนตะขาบ','รถบดตีนแกะ','รถบดล้อเหล็ก สั่นสะเทือน','รถบดล้อเหล็กแบบเดินตาม','รถแทรคเตอร์ล้อยาง','รถบดล้อยางขับเคลื่อนตัวเอง','รถบรรทุกเทท้าย - ๖ ล้อ','รถบรรทุกเทท้าย - ๑๐ ล้อ','รถบรรทุกเทท้าย - ๑๐ ล้อ + ลากพ่วง','รถบรรทุกน้ำ-น้ำมัน - ๖ ล้อ','รถบรรทุกน้ำ-น้ำมัน - ๑๐ ล้อ','รถบรรทุกกระบะ','รถบรรทุกติดปั้นจั่น - ๖ ล้อ เครน ๓ ตัน','รถบรรทุกติดปั้นจั่น - ๑๐ ล้อ เครน ๖ ตัน','รถบรรทุกติดปั้นจั่น - เครนขนาดใหญ่ ๒๐ - ๒๕ ตัน','รถหัวลากจูง','รถปิคอัพ','เครื่องสูบน้ำ','รถลาดยางผิวเรียบ - ชุดลาดยาง','เครื่องลาดยางผิวเรียบ - รถบรรทุก','เครื่องพ่นยาง ๖,๐๐๐ ลิตร - เครื่องพ่นยาง','เครื่องพ่นยาง ๔,๐๐๐ ลิตร - เครื่องพ่นยาง','เครื่องพ่นยาง ๔,๐๐๐ ลิตร - รถบรรทุก','ชุดกวาดผิวถนน - เครื่องยนต์เบนซิน','ชุดกวาดผิวถนน - แบบกลไก','เครื่องตบดิน (เบนซิน)','เครื่องเจาะบ่อบาดาล','เครื่องมือเจาะสำรวจชั้นดิน','เครื่องตีเส้นจราจร','เครื่องกำเนิดไฟฟ้า','เครื่องเชื่อมไฟฟ้า','เครื่องผสมคอนกรีต','เตาต้มยาง','รถขุดแบบสลิงลาก','รถต้ม','รถซ่อมบำรุงผิวถนนลาดยาง','เครื่องรีไซเคิลผิวลาดยาง','รถโม่คอนกรีต','เครื่องตัดคอนกรีต','เครื่องขัดมันพื้นปูน','เครื่องปาดปูน'],
+  testItem: ['เหล็ก RB ๑๕ มม.','เหล็ก DB ๑๒ มม.','เหล็ก RB ๑๙ มม.','ตระแกรงเหล็ก(wire mesh)','ทดสอบความหนาแน่นคันทางเดิม','Modified Proctor Density ๙๕%','ทดสอบความหนาแน่นชั้นหินคลุก','Standard Proctor Density ๙๕%','ทดสอบกำลังอัดคอนกรีตลูกบาศ์ก','ทดสอบคุณสมบัติหินคลุก','C.B.R. TEST','- ทดสอบวัสดุออกแบบผิวทาง Asphaltic concrete','- ทดสอบผิวทาง Asphaltic concrete (Marshall Density)','- ทดสอบความแน่นผิวจราจร Asphaltic concrete (Coring asphat)','- ทดสอบวัสดุออกแบบส่วนผสมคอนกรีต'],
+  lab: ['วิทยาลัยเทคนิคสุรนารี','วิทยาลัยเทคนิคนครราชสีมา','สำนักงานทางหลวงชนบทที่ 5','วิทยาลัยเทคนิคหลวงพ่อคูณ','แขวงทางหลวงชนบทนครราชสีมา'],
+  testRes: ['ผ่าน','ไม่ผ่าน','รอผล','ผ่านเกณฑ์มาตรฐาน'],
+  weather: ['แจ่มใส','แจ่มใส (เช้า)','แจ่มใส (บ่าย)','มืดครึ้ม','ฝนตกเล็กน้อย','ฝนตกเล็กน้อย (เช้า)','ฝนตกเล็กน้อย (บ่าย)','ฝนตกเล็กน้อย (เย็น)','ฝนตก','ฝนตกหนัก (เช้า)','ฝนตกหนัก (บ่าย)','ฝนตกหนัก (เย็น)'],
+  boq: ['งานขุดรื้อผิวทางเดิมแล้วบดทับ (ลูกรัง 10 ซม.)','งานขุดรื้อผิวทางเดิมแล้วบดทับ (หินคลุก 10 ซม.)','งานปรับพื้นทางเดิม','งานพื้นทางหินคลุก','งานไหล่ทางหินคลุก','งานเสริมหินคลุกไหล่ทางหนา 0.1 ม. 2 ข้าง','งานผิวจราจรคอนกรีตเสริมเหล็ก (ค.ส.ล.)','งานผิวทางแอสฟัลต์คอนกรีต','ขุดวางท่อลอด ค.ส.ล. Ø 0.40 ม.','งานวางท่อ ค.ส.ล. ขนาด 0.80 ม.'],
+  staff: [
+    { name:'สิบเอกพิชิต โปรยกระโทก', pos:'ผู้อำนวยการกองช่าง' },
+    { name:'นายกิตติ พลแหลม', pos:'วิศวกรโยธาชำนาญการ' },
+    { name:'นางสาวธนัชชานันท์ พิชัยฐิติยากุล', pos:'รองปลัดเทศบาล' },
+    { name:'นางสาวอชิรญาณ์ ดวงกระโทก', pos:'หัวหน้าสำนักปลัดเทศบาล' },
+    { name:'นางปาณิสรา โพธิ์เงิน', pos:'หัวหน้าฝ่ายบริหารงานทั่วไป' },
+    { name:'จ่าเอกวิชัย จิตรคง', pos:'นายช่างไฟฟ้าปฏิบัติงาน' },
+    { name:'นางสาวธันยนันท์ เงินประโคน', pos:'เจ้าพนักงานธุรการชำนาญงาน' },
+    { name:'นางสาวมัลลิกา สายสมบูรณ์', pos:'นักวิชาการสุขาภิบาลปฏิบัติการ' },
+    { name:'นายพิเชฎฐ์ พริ้งกระโทก', pos:'เจ้าพนักงานป้องกันและบรรเทาสาธารณภัย' },
+    { name:'นางเบญจมาภรณ์ ยุติธรรม', pos:'หัวหน้าฝ่ายส่งเสริมการศึกษาฯ' },
+    { name:'นางสาวจารุณี กรีหมื่นไวย', pos:'นักวิชาการทรัพยากรบุคคลชำนาญการ' },
+    { name:'นางสาวพัชรประภา เหล่าอัน', pos:'หัวหน้าฝ่ายอำนวยการ' }
+  ]
+};
+
+const DB_NAME='SmartSiteReportDB_V6', STORE_NAME='app_state', LS_FALLBACK_KEY='smart_site_reports_v6_fallback';
+let db=null, useFallback=false;
+function openDB(){ return new Promise(r=>{ try{ const q=indexedDB.open(DB_NAME,1); q.onupgradeneeded=e=>{ if(!e.target.result.objectStoreNames.contains(STORE_NAME)) e.target.result.createObjectStore(STORE_NAME); }; q.onsuccess=e=>{ db=e.target.result; r(true); }; q.onerror=()=>{ useFallback=true; r(false); }; }catch{ useFallback=true; r(false); } }); }
+function dbGet(k){ if(useFallback||!db){ try{ const v=localStorage.getItem(LS_FALLBACK_KEY+'_'+k); return Promise.resolve(v?JSON.parse(v):null); }catch{ return Promise.resolve(null); } } return new Promise(r=>{ try{ const q=db.transaction(STORE_NAME,'readonly').objectStore(STORE_NAME).get(k); q.onsuccess=()=>r(q.result); q.onerror=()=>r(null); }catch{ r(null); } }); }
+function dbSet(k,v){ if(useFallback||!db){ try{ localStorage.setItem(LS_FALLBACK_KEY+'_'+k,JSON.stringify(v)); }catch{} return Promise.resolve(); } return new Promise(r=>{ try{ const q=db.transaction(STORE_NAME,'readwrite').objectStore(STORE_NAME).put(v,k); q.onsuccess=()=>r(); q.onerror=()=>{ useFallback=true; try{ localStorage.setItem(LS_FALLBACK_KEY+'_'+k,JSON.stringify(v)); }catch{} r(); }; }catch{ r(); } }); }
+
+function makeWeekDays(weekNum, startDateStr, endDateStr) {
+  const days=[], cur=new Date(startDateStr+'T00:00:00'), end=endDateStr?new Date(endDateStr+'T00:00:00'):null;
+  for(let i=0;i<7;i++){
+    if(end&&cur>end) break;
+    const iso=`${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
+    days.push({ dayNo:i+1, date:iso, work:'- ยังไม่เข้าดำเนินการ', volume:'-', machine:'-', qty:'-', foreman:'-', tech:'-', labor:'-', weather:'แจ่มใส', order:'-' });
+    const isSun=cur.getDay()===0; cur.setDate(cur.getDate()+1); if(isSun) break;
+  }
+  return { weekNo:weekNum, plannedPct:'', boqPct:{}, days };
+}
+
+const DEFAULT_DATA = [{
+  id:'proj_46_2569', updatedAt:new Date().toLocaleString('th-TH'), lat:14.736, lon:102.387, customGaruda:'',
+  name:'โครงการก่อสร้างถนนหินคลุก บ้านหนองหิน หมู่ที่ 10',
+  location:'บ้านหนองหิน หมู่ที่ 10 ตำบลหนองหัวแรต อำเภอหนองบุญมาก จังหวัดนครราชสีมา',
+  employer:'เทศบาลตำบลหนองหัวแรต', contractor:'ห้างหุ้นส่วน เงากระจ่าง',
+  contractorAddr:'เลขที่ 141/46 ถนนเซนต์เมรี่ ตำบลในเมือง อำเภอเมืองนครราชสีมา จังหวัดนครราชสีมา',
+  designer:'นายกิตติ พลแหลม',
+  scope:'จากไร่นายเสมอ ชาวสวน ถึงไร่นายเทียนชัย โอนโคกกรวด โดยมีขนาดผิวจราจรกว้าง 3.00 เมตร ยาว 765 เมตร หนา 0.15 เมตร ตามรูปแบบและรายการก่อสร้างเทศบาลตำบลหนองหัวแรต เลขที่ 46/2569',
+  contractNo:'38/2569', contractDate:'2026-08-03', startDate:'2026-08-04', handoverDate:'2026-08-05', finishDate:'2026-09-26', duration:60, endDate:'2026-10-02',
+  budget:313000, penalty:783, orderNo:'535/2569', orderDate:'2026-07-01', extendNo:'-', extendDate:'', accelNo:'-', accelDate:'',
+  supervisor:'นายกิตติ พลแหลม', supervisorPos:'วิศวกรโยธาชำนาญการ', contractorRep:'นายจรัญ เปรมสุข',
+  committees:[
+    { name:'สิบเอกพิชิต โปรยกระโทก', role:'ประธานกรรมการฯ', pos:'ผู้อำนวยการกองช่าง' },
+    { name:'นางปาณิสรา โพธิ์เงิน', role:'กรรมการฯ', pos:'หัวหน้าฝ่ายบริหารงานทั่วไป' },
+    { name:'จ่าเอกวิชัย จิตรคง', role:'กรรมการฯ', pos:'นายช่างไฟฟ้าปฏิบัติงาน' },
+    { name:'', role:'กรรมการฯ', pos:'' }, { name:'', role:'กรรมการฯ', pos:'' }
+  ],
+  phases:[
+    { id:1, from:'2026-09-14', to:'2026-09-16', work:'- งานเกรดบดอัดแน่นพื้นทางเดิม', volume:'ยาว 255 ม./วัน', machine:'รถเกรดเดอร์', pct:30 },
+    { id:2, from:'2026-09-17', to:'2026-09-25', work:'- ลงหินคลุก ปรับเกลี่ย และบดอัดแน่น', volume:'ยาว 85 ม./วัน', machine:'รถเกรดเดอร์ / รถบดล้อเหล็ก สั่นสะเทือน', pct:100 }
+  ],
+  weeks:[makeWeekDays(1,'2026-08-04','2026-09-26')],
+  boq:[{ id:1, name:'งานขุดรื้อผิวทางเดิมแล้วบดทับ (ลูกรัง 10 ซม.)', cost:1117 }, { id:2, name:'งานพื้นทางหินคลุก', cost:58068 }],
+  monthly:{ monthIdx:8, year:'2569' },
+  installments:[{ id:1, no:1, amt:313000, done:'2026-09-26', inspect:'2026-10-19' }],
+  tests:[{ id:1, item:'ทดสอบคุณสมบัติหินคลุก', qty:1, date:'2026-09-13', lab:'วิทยาลัยเทคนิคสุรนารี', refNo:'วทส. 102/69', res:'ผ่าน' }],
+  approvals:[{ id:1, item:'ทดสอบคุณสมบัติหินคลุก', date:'2026-08-10', by:'คณะกรรมการตรวจรับพัสดุ', res:'เห็นชอบ' }],
+  issues:[], photos:[], mapImage:''
+}];
+
+let projects=[], presets=JSON.parse(JSON.stringify(DEFAULT_PRESETS)), currentProjectId='';
+
+async function init() {
+  checkAuthOnLoad();
+  await openDB();
+  const sp=await dbGet('projects'), spr=await dbGet('presets');
+  if(spr){
+    presets={...DEFAULT_PRESETS,...spr};
+    presets.machine=Array.from(new Set([...DEFAULT_PRESETS.machine,...(spr.machine||[])]));
+    presets.testItem=Array.from(new Set([...DEFAULT_PRESETS.testItem,...(spr.testItem||[])]));
+    presets.lab=Array.from(new Set([...DEFAULT_PRESETS.lab,...(spr.lab||[])]));
+    presets.testRes=Array.from(new Set([...DEFAULT_PRESETS.testRes,...(spr.testRes||[])]));
+    presets.order=Array.from(new Set([...DEFAULT_PRESETS.order,...(spr.order||[])]));
+  }
+  if(sp&&Array.isArray(sp)&&sp.length>0) projects=sp; else { projects=JSON.parse(JSON.stringify(DEFAULT_DATA)); await dbSet('projects',projects); }
+  projects.forEach(p => {
+    if (!p.monthly) p.monthly = { monthIdx: 8, year: '2569' };
+    if (p.monthly.monthIdx === undefined) { const idx = THAI_MONTHS.indexOf(p.monthly.month); p.monthly.monthIdx = idx >= 0 ? idx : 8; }
+    (p.weeks || []).forEach(w => { if (!w.boqPct) w.boqPct = {}; });
+  });
+  await dbSet('presets',presets);
+  currentProjectId=projects[0]?.id||'';
+  document.getElementById('saveStatus').textContent=useFallback?'✓ พร้อมใช้งาน (LocalStorage)':'✓ พร้อมใช้งาน (IndexedDB)';
+  renderProjectSelector(); renderPresetDropdowns(); loadProjectUI();
+}
+async function saveStorage(msg='บันทึกอัตโนมัติแล้ว'){ const p=getProj(); if(p) p.updatedAt=new Date().toLocaleString('th-TH'); await dbSet('projects',projects); await dbSet('presets',presets); document.getElementById('saveStatus').textContent=`✓ ${msg} (${new Date().toLocaleTimeString('th-TH')})`; }
+function manualSave(){ saveStorage('บันทึกโครงการแล้ว'); renderMemoryTab(); }
+function getProj(){ return projects.find(p=>p.id===currentProjectId)||projects[0]; }
+function mkOpts(arr){ return `<option value="">-- เลือก --</option>`+(arr||[]).map(o=>`<option value="${o.replace(/"/g,'&quot;')}">${o}</option>`).join(''); }
+
+function renderPresetDropdowns() {
+  ['boqPresetSel:boq','phWorkSel:work','phMachineSel:machine','m_workSel:work','m_orderSel:order','m_machineSel:machine','m_weatherSel:weather','m_testItemSel:testItem','m_testLabSel:lab','m_testResSel:testRes','tItemPresetSel:testItem','aItemPresetSel:testItem','tLabPresetSel:lab','tResPresetSel:testRes']
+    .forEach(pair=>{ const [id,key]=pair.split(':'), el=document.getElementById(id); if(el) el.innerHTML=mkOpts(presets[key]); });
+  const supSel=document.getElementById('supPresetSel'); if(supSel) supSel.innerHTML=getStaffOptionsHtml();
+}
+function savePhWorkPreset(){ const v=document.getElementById('ph_work').value.trim(); if(!v) return alert('พิมพ์เนื้องานก่อนกด +'); if(!presets.work.includes(v)){ presets.work.unshift(v); saveStorage('บันทึกเนื้องานแล้ว'); renderPresetDropdowns(); } }
+function saveModalPreset(field,inputId){ const v=document.getElementById(inputId).value.trim(); if(!v) return alert('พิมพ์ข้อความก่อนกด +'); if(!presets[field]) presets[field]=[]; if(!presets[field].includes(v)){ presets[field].unshift(v); saveStorage(`บันทึกตัวเลือก "${v}" แล้ว`); renderPresetDropdowns(); renderTests(); } }
+function getStaffOptionsHtml(){ return `<option value="">-- เลือกรายชื่อ --</option>`+(presets.staff||[]).map((s,i)=>`<option value="${i}">${s.name} (${s.pos})</option>`).join(''); }
+function pickStaff(idxStr,nameId,posId,comIdx=-1){ if(idxStr==='') return; const s=(presets.staff||[])[Number(idxStr)]; if(!s) return; document.getElementById(nameId).value=s.name; document.getElementById(posId).value=s.pos; if(comIdx>=0){ const p=getProj(); p.committees[comIdx].name=s.name; p.committees[comIdx].pos=s.pos; saveStorage(); } else saveInfo(); }
+function saveStaffPreset(nameId,posId){ const n=document.getElementById(nameId).value.trim(), pos=document.getElementById(posId).value.trim(); if(!n) return alert('พิมพ์ชื่อก่อนกด +'); if(!presets.staff.some(s=>s.name===n)){ presets.staff.unshift({name:n,pos:pos||'-'}); saveStorage('บันทึกรายชื่อแล้ว'); renderPresetDropdowns(); loadProjectUI(); } }
+function saveBoqPreset(){ const v=document.getElementById('b_name').value.trim(); if(!v) return alert('พิมพ์ชื่องานก่อนกด +'); if(!presets.boq.includes(v)){ presets.boq.unshift(v); saveStorage('บันทึกตัวเลือกงานแล้ว'); renderPresetDropdowns(); } }
+async function uploadGaruda(e){ const f=e.target.files[0]; if(!f) return; getProj().customGaruda=await compressImage(f,300); await saveStorage('อัปโหลดครุฑแล้ว'); alert('อัปโหลดครุฑเรียบร้อย'); }
+function resetGaruda(){ getProj().customGaruda=''; saveStorage('ใช้ครุฑมาตรฐานแล้ว'); alert('ใช้ครุฑมาตรฐานเรียบร้อย'); }
+
+function renderProjectSelector(){ document.getElementById('projectSelector').innerHTML=projects.map(p=>`<option value="${p.id}" ${p.id===currentProjectId?'selected':''}>${p.name}</option>`).join(''); }
+function switchProject(id){ currentProjectId=id; loadProjectUI(); }
+function createNewProject(){ const n=prompt('ระบุชื่อโครงการใหม่:'); if(!n) return; const b=JSON.parse(JSON.stringify(DEFAULT_DATA[0])), td=new Date().toISOString().slice(0,10); b.id='proj_'+Date.now(); b.name=n; b.startDate=td; b.handoverDate=td; const ed=new Date(td); ed.setDate(ed.getDate()+59); b.endDate=ed.toISOString().slice(0,10); b.finishDate=''; b.extendDate=''; b.phases=[]; b.tests=[]; b.photos=[]; b.issues=[]; b.weeks=[makeWeekDays(1,b.startDate,b.endDate)]; projects.push(b); currentProjectId=b.id; saveStorage('สร้างโครงการใหม่แล้ว'); renderProjectSelector(); loadProjectUI(); }
+function duplicateProject(id){ const s=projects.find(x=>x.id===id); if(!s) return; const c=JSON.parse(JSON.stringify(s)); c.id='proj_'+Date.now(); c.name=s.name+' (สำเนา)'; projects.push(c); currentProjectId=c.id; saveStorage('คัดลอกโครงการแล้ว'); renderProjectSelector(); loadProjectUI(); renderMemoryTab(); }
+function deleteProject(id){ if(projects.length<=1) return alert('ต้องมีอย่างน้อย 1 โครงการ'); if(!confirm('ยืนยันการลบโครงการนี้?')) return; projects=projects.filter(x=>x.id!==id); if(currentProjectId===id) currentProjectId=projects[0].id; saveStorage('ลบโครงการแล้ว'); renderProjectSelector(); loadProjectUI(); renderMemoryTab(); }
+
+function openTab(tabId,btn){ document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active')); document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active')); document.getElementById(tabId).classList.add('active'); if(btn) btn.classList.add('active'); if(tabId==='tab-timeline') renderTimelineUI(); if(tabId==='tab-excel') { renderBoq(); renderContinuousExcel(); } if(tabId==='tab-other') updateMonthlyAutoSummary(); if(tabId==='tab-report') renderReport(); if(tabId==='tab-memory') renderMemoryTab(); upgradeDateInputs(); }
+function formatThaiDate(d){ if(!d||d==='-') return '-'; const [y,mo,da]=d.split('-').map(Number); return `${da} ${THAI_MONTHS[mo-1]} ${y+543}`; }
+function formatShortDate(d){ if(!d||d==='-') return '-'; const [y,mo,da]=d.split('-').map(Number); return `${da}/${mo}/${(y+543).toString().slice(-2)}`; }
+function calcEndDate(){ const s=document.getElementById('p_startDate').value, dur=Number(document.getElementById('p_duration').value)||0; if(s&&dur>0){ const d=new Date(s+'T00:00:00'); d.setDate(d.getDate()+dur-1); document.getElementById('p_endDate').value=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; upgradeDateInputs(); } }
+
+function findDayInWeeks(p,iso){ for(let w=0;w<(p.weeks||[]).length;w++){ const d=p.weeks[w].days.findIndex(x=>x.date===iso); if(d!==-1) return {wIdx:w,dIdx:d,day:p.weeks[w].days[d]}; } return null; }
+function renderModalDayTests(iso){ const p=getProj(), list=(p.tests||[]).map((t,idx)=>({...t,idx})).filter(t=>t.date===iso); document.getElementById('m_dayTestsList').innerHTML=list.map(t=>`<div style="display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px solid #bae6fd;padding:4px 8px;border-radius:4px;margin-bottom:4px;font-size:12.5px;"><span>🧪 <b>${t.item}</b> (${t.lab}) — <b>${t.res}</b></span><button type="button" class="btn btn-danger btn-sm" onclick="getProj().tests.splice(${t.idx},1);saveStorage();renderTests();renderCalendarTimeline();renderModalDayTests('${iso}');">ลบ</button></div>`).join('')||'<div style="font-size:12px;color:#64748b;">ยังไม่มีรายการทดสอบในวันนี้</div>'; }
+function openDayModal(iso){ const p=getProj(), f=findDayInWeeks(p,iso), d=f?f.day:{work:'- ยังไม่เข้าดำเนินการ',order:'-',volume:'-',machine:'-',qty:'-',foreman:'-',tech:'-',labor:'-',weather:'แจ่มใส'}; document.getElementById('m_isoDate').value=iso; document.getElementById('modalDateTitle').textContent=`📅 บันทึกการทำงานวันที่ ${formatThaiDate(iso)}`; document.getElementById('m_work').value=d.work||''; document.getElementById('m_order').value=d.order||'-'; document.getElementById('m_volume').value=d.volume||'-'; document.getElementById('m_machine').value=d.machine||'-'; document.getElementById('m_qty').value=d.qty||'-'; document.getElementById('m_foreman').value=d.foreman||'-'; document.getElementById('m_tech').value=d.tech||'-'; document.getElementById('m_labor').value=d.labor||'-'; document.getElementById('m_weather').value=d.weather||'แจ่มใส'; document.getElementById('m_testItem').value=''; renderModalDayTests(iso); document.getElementById('dayModal').classList.add('open'); }
+function closeDayModal(){ document.getElementById('dayModal').classList.remove('open'); }
+function saveDayModal(){
+  const p=getProj(), iso=document.getElementById('m_isoDate').value; let f=findDayInWeeks(p,iso);
+  if(!f){ const dO=new Date(iso+'T00:00:00'), off=(dO.getDay()+6)%7, mon=new Date(dO); mon.setDate(dO.getDate()-off); const mIso=`${mon.getFullYear()}-${String(mon.getMonth()+1).padStart(2,'0')}-${String(mon.getDate()).padStart(2,'0')}`; p.weeks.push(makeWeekDays(p.weeks.length+1,mIso,null)); p.weeks.sort((a,b)=>(a.days[0]?.date||'').localeCompare(b.days[0]?.date||'')); p.weeks.forEach((w,i)=>w.weekNo=i+1); f=findDayInWeeks(p,iso); }
+  if(f){ const d=f.day; d.work=document.getElementById('m_work').value.trim()||'- ยังไม่เข้าดำเนินการ'; d.order=document.getElementById('m_order').value.trim()||'-'; d.volume=document.getElementById('m_volume').value.trim()||'-'; d.machine=document.getElementById('m_machine').value.trim()||'-'; d.qty=document.getElementById('m_qty').value.trim()||'-'; d.foreman=document.getElementById('m_foreman').value.trim()||'-'; d.tech=document.getElementById('m_tech').value.trim()||'-'; d.labor=document.getElementById('m_labor').value.trim()||'-'; d.weather=document.getElementById('m_weather').value.trim()||'แจ่มใส'; }
+  saveStorage(`บันทึกวันที่ ${formatShortDate(iso)} แล้ว`); closeDayModal(); populateWeekSelectors(); renderCalendarTimeline(); renderContinuousExcel();
+}
+function addTestFromModal(){ const p=getProj(), iso=document.getElementById('m_isoDate').value, item=document.getElementById('m_testItem').value.trim(); if(!item) return alert('ระบุรายการทดสอบ'); p.tests.push({id:Date.now(),item,qty:1,date:iso,lab:document.getElementById('m_testLab').value.trim()||'วิทยาลัยเทคนิคสุรนารี',refNo:'-',res:document.getElementById('m_testRes').value.trim()||'ผ่าน'}); document.getElementById('m_testItem').value=''; saveStorage('เพิ่มการทดสอบแล้ว'); renderTests(); renderCalendarTimeline(); renderContinuousExcel(); renderModalDayTests(iso); }
+function setQuickMilestone(type){ const p=getProj(), iso=document.getElementById('m_isoDate').value; if(type==='handover'){ p.handoverDate=iso; document.getElementById('p_handoverDate').value=iso; document.getElementById('m_work').value='- ส่งมอบพื้นที่'; } else if(type==='finish'){ p.finishDate=iso; document.getElementById('tl_finishDate').value=iso; document.getElementById('m_work').value='- โครงการแล้วเสร็จ ส่งมอบงาน'; } upgradeDateInputs(); saveDayModal(); }
+function saveFinishDate(val){ getProj().finishDate=val; document.getElementById('tl_finishDate').value=val; upgradeDateInputs(); saveStorage('อัปเดตวันแล้วเสร็จแล้ว'); renderCalendarTimeline(); }
+
+function renderCalendarTimeline() {
+  const p=getProj(); if(!p) return;
+  document.getElementById('tl_finishDate').value=p.finishDate||'';
+  const allDates=[p.startDate,p.endDate,p.extendDate,p.finishDate,...(p.tests||[]).map(t=>t.date),...(p.installments||[]).map(i=>i.inspect)].filter(Boolean).sort();
+  const sDate=new Date((allDates[0]||new Date().toISOString().slice(0,10))+'T00:00:00'), eDate=new Date((allDates[allDates.length-1]||allDates[0]||new Date().toISOString().slice(0,10))+'T00:00:00');
+  const dailyMap={}; (p.weeks||[]).forEach(w=>w.days.forEach(d=>dailyMap[d.date]=d));
+  let curY=sDate.getFullYear(), curM=sDate.getMonth(), endY=eDate.getFullYear(), endM=eDate.getMonth(), html='', safety=0;
+  while((curY<endY||(curY===endY&&curM<=endM))&&safety<24){
+    safety++;
+    const firstDay=new Date(curY,curM,1), daysInMonth=new Date(curY,curM+1,0).getDate(), startOffset=(firstDay.getDay()+6)%7;
+    let cells=''; for(let i=0;i<startOffset;i++) cells+=`<div class="cal-cell empty"></div>`;
+    for(let day=1;day<=daysInMonth;day++){
+      const iso=`${curY}-${String(curM+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`, dow=new Date(curY,curM,day).getDay(), isWknd=(dow===0||dow===6), holName=getHolidayName(iso), effEnd=p.extendDate||p.endDate, inC=(p.startDate&&effEnd&&iso>=p.startDate&&iso<=effEnd), rec=dailyMap[iso];
+      let tags='';
+      if(holName) tags+=`<div class="cal-tag tag-hol">${holName}</div>`;
+      if(iso===p.startDate) tags+=`<div class="cal-tag tag-mile">🚀 แจ้งเข้างาน</div>`;
+      if(iso===p.handoverDate) tags+=`<div class="cal-tag tag-mile">📍 ส่งมอบพื้นที่</div>`;
+      if(rec&&rec.work&&rec.work!=='- ยังไม่เข้าดำเนินการ') tags+=`<div class="cal-tag tag-daily">📝 ${rec.work.replace(/^-\s*/,'')}${rec.volume&&rec.volume!=='-'?` (${rec.volume})`:''}</div>`;
+      else (p.phases||[]).forEach(ph=>{ if(iso>=ph.from&&iso<=ph.to) tags+=`<div class="cal-tag tag-phase">${ph.work.replace(/^-\s*/,'')}</div>`; });
+      (p.tests||[]).forEach(t=>{ if(t.date===iso) tags+=`<div class="cal-tag tag-test">🧪 ${t.item} (${t.res})</div>`; });
+      if(iso===p.finishDate) tags+=`<div class="cal-tag tag-done">✅ แล้วเสร็จ/ส่งมอบ</div>`;
+      if(iso===p.endDate) tags+=`<div class="cal-tag tag-mile">🏁 สิ้นสุดสัญญา</div>`;
+      if(p.extendDate&&iso===p.extendDate) tags+=`<div class="cal-tag tag-mile">⏳ สิ้นสุดขยายสัญญา</div>`;
+      (p.installments||[]).forEach(inst=>{ if(inst.inspect===iso) tags+=`<div class="cal-tag tag-done">📋 ตรวจรับงวด ${inst.no}</div>`; });
+      cells+=`<div class="cal-cell ${holName?'holiday':(isWknd?'wknd':'')} ${inC?'in-contract':''}" onclick="openDayModal('${iso}')"><div class="cal-day-num"><span>${day}</span></div>${tags}</div>`;
+    }
+    html+=`<div class="cal-month"><div class="cal-month-hdr">${THAI_MONTHS[curM]} พ.ศ. ${curY+543}</div><div class="cal-grid"><div class="cal-dow">จันทร์</div><div class="cal-dow">อังคาร</div><div class="cal-dow">พุธ</div><div class="cal-dow">พฤหัสบดี</div><div class="cal-dow">ศุกร์</div><div class="cal-dow wknd">เสาร์</div><div class="cal-dow wknd">อาทิตย์</div>${cells}</div></div>`;
+    curM++; if(curM>11){ curM=0; curY++; }
+  }
+  document.getElementById('calendarTimeline').innerHTML=html;
+  const effEnd=p.extendDate||p.endDate, warns=[];
+  if(p.handoverDate&&p.startDate&&p.handoverDate<p.startDate) warns.push('วันส่งมอบพื้นที่อยู่ก่อนวันเริ่มสัญญา');
+  if(p.finishDate&&effEnd&&p.finishDate>effEnd) warns.push(`วันส่งมอบงานเลยกำหนดสัญญา — ค่าปรับวันละ ${p.penalty.toLocaleString()} บาท`);
+  document.getElementById('timelineAlerts').innerHTML=warns.length?`<div class="alert-box alert-warn">⚠️ ${warns.join(' | ')}</div>`:`<div class="alert-box alert-ok">✅ <b>ระยะเวลาสัญญา:</b> ${formatThaiDate(p.startDate)} ถึง ${formatThaiDate(effEnd)} (${p.duration||60} วัน)${p.finishDate?` | <b>วันแล้วเสร็จ:</b> ${formatThaiDate(p.finishDate)}`:''}</div>`;
+}
+
+function renderTimelineUI(){ const p=getProj(); if(!p) return; if(!p.phases) p.phases=[]; renderCalendarTimeline(); document.querySelector('#phaseTable tbody').innerHTML=p.phases.map((ph,i)=>`<tr><td><input type="date" value="${ph.from||''}" onchange="updatePhase(${i},'from',this.value)"></td><td><input type="date" value="${ph.to||''}" onchange="updatePhase(${i},'to',this.value)"></td><td><input value="${(ph.work||'').replace(/"/g,'&quot;')}" onchange="updatePhase(${i},'work',this.value)"></td><td><input value="${(ph.volume||'').replace(/"/g,'&quot;')}" onchange="updatePhase(${i},'volume',this.value)"></td><td><input value="${(ph.machine||'').replace(/"/g,'&quot;')}" onchange="updatePhase(${i},'machine',this.value)"></td><td><input type="number" min="0" max="100" value="${ph.pct||0}" onchange="updatePhase(${i},'pct',Number(this.value)||0)"></td><td><button type="button" class="btn btn-danger btn-sm" onclick="getProj().phases.splice(${i},1);saveStorage();renderTimelineUI();">ลบ</button></td></tr>`).join('')||'<tr><td colspan="7" style="text-align:center;color:#64748b;">ยังไม่ได้เพิ่มช่วงการทำงาน</td></tr>'; upgradeDateInputs(); }
+function updatePhase(i,f,v){ getProj().phases[i][f]=v; saveStorage('แก้ไขไทม์ไลน์แล้ว'); renderCalendarTimeline(); }
+function addPhase(){ const p=getProj(), from=document.getElementById('ph_from').value, to=document.getElementById('ph_to').value, work=document.getElementById('ph_work').value.trim(); if(!from||!to||!work) return alert('ระบุข้อมูลให้ครบ'); p.phases.push({id:Date.now(),from,to,work,volume:document.getElementById('ph_vol').value.trim()||'-',machine:document.getElementById('ph_machine').value.trim()||'-',pct:Number(document.getElementById('ph_pct').value)||0}); p.phases.sort((a,b)=>a.from.localeCompare(b.from)); document.getElementById('ph_work').value=''; document.getElementById('ph_vol').value=''; saveStorage('เพิ่มช่วงการทำงานแล้ว'); renderTimelineUI(); }
+function applyTimelineToDailyLogs(){
+  const p=getProj(); if(!p.startDate) return alert('ระบุวันเริ่มสัญญาก่อน');
+  const stopDate=p.finishDate?p.finishDate:(p.extendDate||p.endDate); if(!stopDate) return alert('ระบุวันแล้วเสร็จหรือสิ้นสุดสัญญา');
+  if(!confirm(`สร้างบันทึกตั้งแต่ ${formatThaiDate(p.startDate)} ถึง ${formatThaiDate(stopDate)}?`)) return;
+  const weeks=[]; let curDate=p.startDate, wNo=1;
+  while(curDate<=stopDate&&wNo<=100){
+    const w=makeWeekDays(wNo,curDate,stopDate); if(!w.days.length) break;
+    w.days.forEach(d=>{
+      const notes=[]; let vol='-',mach='-',qty='-',fm='-',tc='-',lb='-';
+      if(d.date===p.startDate) notes.push('- แจ้งเข้าดำเนินการ'); if(d.date===p.handoverDate) notes.push('- ส่งมอบพื้นที่');
+      (p.phases||[]).forEach(ph=>{ if(d.date>=ph.from&&d.date<=ph.to){ notes.push(ph.work); if(ph.volume&&ph.volume!=='-') vol=ph.volume; mach=ph.machine||'-'; qty=mach!=='-'?'1':'-'; fm='1'; tc='2'; lb='3'; } });
+      (p.tests||[]).forEach(t=>{ if(t.date===d.date) notes.push(`- ${t.item} (${t.lab} : ${t.res})`); });
+      if(p.finishDate&&d.date===p.finishDate) notes.push('- โครงการแล้วเสร็จ ส่งมอบงาน');
+      d.work=notes.length?notes.join(' '):'- ยังไม่เข้าดำเนินการ'; d.volume=vol; d.machine=mach; d.qty=qty; d.foreman=fm; d.tech=tc; d.labor=lb;
+    });
+    weeks.push(w);
+    const last=new Date(w.days[w.days.length-1].date+'T00:00:00'); last.setDate(last.getDate()+1);
+    curDate=`${last.getFullYear()}-${String(last.getMonth()+1).padStart(2,'0')}-${String(last.getDate()).padStart(2,'0')}`; wNo++;
+  }
+  p.weeks=weeks; saveStorage(`สร้างบันทึกครบ ${weeks.length} สัปดาห์แล้ว`); populateWeekSelectors(); renderCalendarTimeline(); renderBoq(); renderContinuousExcel();
+}
+
+function populateWeekSelectors(){
+  const p=getProj(), stop=p.finishDate?p.finishDate:(p.extendDate||p.endDate);
+  if(!p.weeks||!p.weeks.length) p.weeks=[makeWeekDays(1,p.startDate,stop)];
+  const opts=p.weeks.map(w=>`<option value="${w.weekNo}">สัปดาห์ที่ ${w.weekNo} (${formatShortDate(w.days[0]?.date)} - ${formatShortDate(w.days[w.days.length-1]?.date)})</option>`).join('');
+  document.getElementById('reportWeek').innerHTML=opts;
+  document.getElementById('boqWeekSel').innerHTML=opts;
+  document.getElementById('weekFilterSel').innerHTML=`<option value="ALL">📋 แสดงต่อเนื่องทุกสัปดาห์ (${p.weeks.length} สัปดาห์)</option>`+opts;
+}
+function makeComboCell(wI,dI,f,v){ const id=`c_${wI}_${dI}_${f}`; return `<div class="combo-box"><input id="${id}" value="${(v||'').replace(/"/g,'&quot;')}" onchange="updateContCell(${wI},${dI},'${f}',this.value)"><select onchange="if(this.value){document.getElementById('${id}').value=this.value;updateContCell(${wI},${dI},'${f}',this.value);this.value='';}">${mkOpts(presets[f])}</select><button type="button" class="btn-add-opt" onclick="saveCustomPreset('${f}','${id}')">+</button></div>`; }
+function saveCustomPreset(f,id){ const v=document.getElementById(id).value.trim(); if(!v) return alert('พิมพ์ข้อความก่อนกด +'); if(!presets[f].includes(v)){ presets[f].unshift(v); saveStorage('บันทึกตัวเลือกแล้ว'); renderContinuousExcel(); renderPresetDropdowns(); } }
+function renderContinuousExcel(){
+  const p=getProj(); if(!p||!p.weeks) return;
+  document.getElementById('w_lat').value=p.lat||14.736; document.getElementById('w_lon').value=p.lon||102.387;
+  const flt=document.getElementById('weekFilterSel').value, tDates=new Set((p.tests||[]).map(t=>t.date)); let html='';
+  p.weeks.forEach((w,wI)=>{
+    if(flt!=='ALL'&&String(w.weekNo)!==flt) return;
+    const wSum = getWeekBoqSummary(p, w.weekNo);
+    html+=`<tr class="week-divider"><td colspan="11"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+      <span>📌 สัปดาห์ที่ ${w.weekNo} (${formatThaiDate(w.days[0]?.date)} ถึง ${formatThaiDate(w.days[w.days.length-1]?.date)})</span>
+      <span style="display:flex;gap:12px;align-items:center;">
+        <span>% ตามแผนสัปดาห์นี้: <input type="number" placeholder="อัตโนมัติ" style="width:72px;background:#fff;border:1px solid var(--primary-light);text-align:center;" value="${w.plannedPct??''}" onchange="getProj().weeks[${wI}].plannedPct=this.value===''?'':Number(this.value);saveStorage();"></span>
+        <span>ผลงานจริง (BOQ): <b style="color:#166534;">${wSum.totalAccW.toFixed(2)}%</b> (+${wSum.totalInW.toFixed(2)}%)</span>
+      </span>
+    </div></td></tr>`;
+    w.days.forEach((d,dI)=>{
+      const dow=d.date?THAI_DAYS_SHORT[new Date(d.date+'T00:00:00').getDay()]:'';
+      let cls=tDates.has(d.date)?'row-test':((d.date===p.startDate||d.date===p.handoverDate||d.date===p.finishDate)?'row-milestone':'');
+      html+=`<tr class="${cls}"><td style="text-align:center;font-weight:700;">${d.dayNo} <span style="color:#64748b;font-weight:400;">(${dow})</span></td><td><input type="date" value="${d.date}" onchange="updateContCell(${wI},${dI},'date',this.value)"></td><td>${makeComboCell(wI,dI,'work',d.work)}</td><td><input value="${(d.volume||'-').replace(/"/g,'&quot;')}" onchange="updateContCell(${wI},${dI},'volume',this.value)"></td><td>${makeComboCell(wI,dI,'machine',d.machine)}</td><td><input value="${d.qty}" style="text-align:center;" onchange="updateContCell(${wI},${dI},'qty',this.value)"></td><td><input value="${d.foreman}" style="text-align:center;" onchange="updateContCell(${wI},${dI},'foreman',this.value)"></td><td><input value="${d.tech}" style="text-align:center;" onchange="updateContCell(${wI},${dI},'tech',this.value)"></td><td><input value="${d.labor}" style="text-align:center;" onchange="updateContCell(${wI},${dI},'labor',this.value)"></td><td>${makeComboCell(wI,dI,'weather',d.weather)}</td><td>${makeComboCell(wI,dI,'order',d.order||'-')}</td></tr>`;
+    });
+  });
+  document.getElementById('excelGridBody').innerHTML=html;
+  upgradeDateInputs(document.getElementById('excelGridBody'));
+}
+function updateContCell(wI,dI,f,v){ getProj().weeks[wI].days[dI][f]=v; saveStorage(); }
+function addNewWeek(){ const p=getProj(), lastW=p.weeks[p.weeks.length-1], nextNo=lastW?lastW.weekNo+1:1, stop=p.finishDate?p.finishDate:(p.extendDate||p.endDate); let nDate=p.startDate||new Date().toISOString().slice(0,10); if(lastW&&lastW.days.length){ const d=new Date(lastW.days[lastW.days.length-1].date+'T00:00:00'); d.setDate(d.getDate()+1); nDate=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; } if(stop&&nDate>stop) return alert(`สิ้นสุดโครงการที่วันที่ ${formatThaiDate(stop)} แล้ว`); p.weeks.push(makeWeekDays(nextNo,nDate,stop)); saveStorage('เพิ่มสัปดาห์แล้ว'); populateWeekSelectors(); renderBoq(); renderContinuousExcel(); }
+
+function loadProjectUI(){
+  const p=getProj(); if(!p) return;
+  ['name','location','employer','contractor','contractorAddr','designer','scope','contractNo','contractDate','startDate','handoverDate','duration','endDate','budget','penalty','orderNo','orderDate','extendNo','extendDate','accelNo','accelDate','supervisor','supervisorPos','contractorRep'].forEach(k=>{ const el=document.getElementById('p_'+k); if(el) el.value=p[k]??''; });
+  const staffOpts=getStaffOptionsHtml();
+  document.getElementById('committeeList').innerHTML=p.committees.map((c,i)=>`<div style="border:1px solid var(--border);padding:8px;border-radius:8px;background:var(--primary-soft);"><div style="font-weight:700;font-size:12.5px;margin-bottom:4px;color:var(--primary);">กรรมการลำดับที่ ${i+1} (${c.role})</div><div class="grid-2"><div class="combo-box"><input id="com_name_${i}" placeholder="ชื่อ-สกุล" value="${c.name}" onchange="getProj().committees[${i}].name=this.value;saveStorage();"><select onchange="pickStaff(this.value,'com_name_${i}','com_pos_${i}',${i});this.value='';">${staffOpts}</select><button type="button" class="btn-add-opt" onclick="saveStaffPreset('com_name_${i}','com_pos_${i}')">+</button></div><input id="com_pos_${i}" placeholder="ตำแหน่ง" value="${c.pos}" onchange="getProj().committees[${i}].pos=this.value;saveStorage();"></div></div>`).join('');
+  document.getElementById('m_month').value = p.monthly.monthIdx ?? 8;
+  document.getElementById('m_year').value = p.monthly.year || '2569';
+  populateWeekSelectors(); renderTimelineUI(); renderBoq(); renderContinuousExcel(); renderInst(); renderTests(); renderIssues(); renderPhotos(); updateMonthlyAutoSummary();
+  upgradeDateInputs();
+}
+function saveInfo(){ const p=getProj(); ['name','location','employer','contractor','contractorAddr','designer','scope','contractNo','contractDate','startDate','handoverDate','endDate','orderNo','orderDate','extendNo','extendDate','accelNo','accelDate','supervisor','supervisorPos','contractorRep'].forEach(k=>p[k]=document.getElementById('p_'+k).value); p.duration=Number(document.getElementById('p_duration').value)||60; p.budget=Number(document.getElementById('p_budget').value)||0; p.penalty=Number(document.getElementById('p_penalty').value)||0; saveStorage(); renderProjectSelector(); renderCalendarTimeline(); }
+function saveMonthly(){ const p=getProj(); p.monthly={monthIdx:Number(document.getElementById('m_month').value), year:document.getElementById('m_year').value}; saveStorage(); updateMonthlyAutoSummary(); }
+
+function addBoq(){ const p=getProj(), el=document.getElementById('b_name'), n=el.value.trim(); if(!n) return alert('ระบุชื่องาน'); p.boq.push({ id: Date.now(), name: n, cost: Number(document.getElementById('b_cost').value)||0 }); el.value=''; document.getElementById('b_cost').value=''; saveStorage('เพิ่มรายการงาน BOQ แล้ว'); renderBoq(); }
+function renderBoq(){
+  const p=getProj(); if(!p) return;
+  const weekNo = Number(document.getElementById('boqWeekSel').value) || 1, sum = getWeekBoqSummary(p, weekNo);
+  document.getElementById('boqWeekSummaryBadge').textContent = `สัปดาห์ที่ ${weekNo}: ถึงก่อนหน้า ${sum.totalPrevW.toFixed(2)}% | ในสัปดาห์ +${sum.totalInW.toFixed(2)}% | สะสมรวม ${sum.totalAccW.toFixed(2)}%`;
+  document.querySelector('#boqTable tbody').innerHTML = sum.rows.map((x, i) => `<tr><td>${i+1}</td><td>${x.name}</td><td><input type="number" value="${x.cost}" onchange="getProj().boq[${i}].cost=Number(this.value)||0;saveStorage();renderBoq();renderContinuousExcel();updateMonthlyAutoSummary();"></td><td>${x.weight.toFixed(2)}%</td><td>${x.prev.toFixed(2)}%</td><td style="background:#f0fdf4;"><input type="number" min="0" max="${Math.max(0, 100 - x.prev)}" step="0.5" value="${x.inW}" onchange="updateWeekBoqPct(${weekNo}, ${x.id}, this.value)" style="font-weight:700; color:#166534; border-color:#86efac;"></td><td><b>${x.acc.toFixed(2)}%</b></td><td><b>${x.weightedAcc.toFixed(2)}%</b></td><td><button type="button" class="btn btn-danger btn-sm" onclick="getProj().boq=getProj().boq.filter(b=>b.id!==${x.id});saveStorage();renderBoq();renderContinuousExcel();updateMonthlyAutoSummary();">ลบ</button></td></tr>`).join('') || '<tr><td colspan="9" style="text-align:center;color:#64748b;">ยังไม่มีรายการงาน BOQ</td></tr>';
+}
+
+function addInstallment(){ const p=getProj(); p.installments.push({id:Date.now(),no:Number(document.getElementById('inst_no').value)||1,amt:Number(document.getElementById('inst_amt').value)||0,done:document.getElementById('inst_done').value,inspect:document.getElementById('inst_inspect').value}); saveStorage(); renderInst(); renderCalendarTimeline(); }
+function updateInst(i,f,v){ getProj().installments[i][f]=v; saveStorage('แก้ไขงวดงานแล้ว'); renderCalendarTimeline(); }
+function renderInst(){ document.querySelector('#instTable tbody').innerHTML=getProj().installments.map((x,i)=>`<tr><td><input type="number" value="${x.no}" onchange="updateInst(${i},'no',Number(this.value)||1)"></td><td><input type="number" value="${x.amt}" onchange="updateInst(${i},'amt',Number(this.value)||0)"></td><td><input type="date" value="${x.done||''}" onchange="updateInst(${i},'done',this.value)"></td><td><input type="date" value="${x.inspect||''}" onchange="updateInst(${i},'inspect',this.value)"></td><td><button class="btn btn-danger btn-sm" onclick="getProj().installments.splice(${i},1);saveStorage();renderInst();renderCalendarTimeline();">ลบ</button></td></tr>`).join(''); upgradeDateInputs(document.getElementById('instTable')); }
+
+function addTest(){ const p=getProj(), item=document.getElementById('t_item').value.trim(); if(!item) return alert('ระบุรายการทดสอบ'); p.tests.push({id:Date.now(),item,qty:Number(document.getElementById('t_qty').value)||1,date:document.getElementById('t_date').value,lab:document.getElementById('t_lab').value.trim()||'-',refNo:document.getElementById('t_ref').value.trim()||'-',res:document.getElementById('t_res').value.trim()||'ผ่าน'}); document.getElementById('t_item').value=''; document.getElementById('t_ref').value=''; saveStorage('เพิ่มผลทดสอบแล้ว'); renderTests(); renderCalendarTimeline(); renderContinuousExcel(); }
+function updateTest(i,f,v){ getProj().tests[i][f]=v; saveStorage('แก้ไขผลทดสอบแล้ว'); renderCalendarTimeline(); renderContinuousExcel(); }
+function addApproval(){ const p=getProj(), item=document.getElementById('a_item').value.trim(); if(!item) return alert('ระบุรายการขออนุมัติ'); p.approvals.push({id:Date.now(),item,date:document.getElementById('a_date').value,by:document.getElementById('a_by').value,res:document.getElementById('a_res').value}); document.getElementById('a_item').value=''; saveStorage('เพิ่มขออนุมัติแล้ว'); renderTests(); }
+function updateApproval(i,f,v){ getProj().approvals[i][f]=v; saveStorage('แก้ไขขออนุมัติแล้ว'); }
+function makeTestCombo(i,f,pk,v){ const id=`tst_${i}_${f}`; return `<div class="combo-box"><input id="${id}" value="${(v||'').replace(/"/g,'&quot;')}" onchange="updateTest(${i},'${f}',this.value)"><select onchange="if(this.value){document.getElementById('${id}').value=this.value;updateTest(${i},'${f}',this.value);this.value='';}">${mkOpts(presets[pk])}</select><button type="button" class="btn-add-opt" onclick="saveModalPreset('${pk}','${id}')">+</button></div>`; }
+function renderTests(){
+  const p=getProj();
+  document.querySelector('#testTable tbody').innerHTML=p.tests.map((t,i)=>`<tr><td>${makeTestCombo(i,'item','testItem',t.item)}</td><td><input type="number" value="${t.qty||1}" onchange="updateTest(${i},'qty',Number(this.value)||1)"></td><td><input type="date" value="${t.date||''}" onchange="updateTest(${i},'date',this.value)"></td><td>${makeTestCombo(i,'lab','lab',t.lab)}</td><td><input value="${(t.refNo||'-').replace(/"/g,'&quot;')}" placeholder="เลขที่ Cert" onchange="updateTest(${i},'refNo',this.value)"></td><td>${makeTestCombo(i,'res','testRes',t.res)}</td><td><button class="btn btn-danger btn-sm" onclick="getProj().tests.splice(${i},1);saveStorage();renderTests();renderCalendarTimeline();renderContinuousExcel();">ลบ</button></td></tr>`).join('')||'<tr><td colspan="7" style="text-align:center;color:#64748b;">ยังไม่มีรายการทดสอบ</td></tr>';
+  document.querySelector('#approvalTable tbody').innerHTML=p.approvals.map((a,i)=>`<tr><td><input value="${(a.item||'').replace(/"/g,'&quot;')}" onchange="updateApproval(${i},'item',this.value)"></td><td><input type="date" value="${a.date||''}" onchange="updateApproval(${i},'date',this.value)"></td><td><input value="${(a.by||'').replace(/"/g,'&quot;')}" onchange="updateApproval(${i},'by',this.value)"></td><td><select onchange="updateApproval(${i},'res',this.value)"><option ${a.res==='เห็นชอบ'?'selected':''}>เห็นชอบ</option><option ${a.res==='ไม่เห็นชอบ'?'selected':''}>ไม่เห็นชอบ</option><option ${a.res==='รอพิจารณา'?'selected':''}>รอพิจารณา</option></select></td><td><button class="btn btn-danger btn-sm" onclick="getProj().approvals.splice(${i},1);saveStorage();renderTests();">ลบ</button></td></tr>`).join('')||'<tr><td colspan="5" style="text-align:center;color:#64748b;">ยังไม่มีรายการขออนุมัติ</td></tr>';
+  upgradeDateInputs(document.getElementById('tab-other'));
+}
+
+function addIssue(){ const p=getProj(), d=document.getElementById('is_desc').value.trim(); if(!d) return alert('ระบุปัญหา'); p.issues.push({id:Date.now(),desc:d,action:document.getElementById('is_action').value}); document.getElementById('is_desc').value=''; saveStorage(); renderIssues(); }
+function renderIssues(){ document.querySelector('#issueTable tbody').innerHTML=getProj().issues.map((x,i)=>`<tr><td>${i+1}</td><td>${x.desc}</td><td>${x.action}</td><td><button class="btn btn-danger btn-sm" onclick="getProj().issues=getProj().issues.filter(k=>k.id!==${x.id});saveStorage();renderIssues();">ลบ</button></td></tr>`).join('')||'<tr><td colspan="4" style="text-align:center;">ไม่มีปัญหาอุปสรรค</td></tr>'; }
+function compressImage(file,maxW=900){ return new Promise(r=>{ const fr=new FileReader(); fr.onload=e=>{ const img=new Image(); img.onload=()=>{ const c=document.createElement('canvas'), s=Math.min(1,maxW/img.width); c.width=img.width*s; c.height=img.height*s; c.getContext('2d').drawImage(img,0,0,c.width,c.height); r(c.toDataURL('image/jpeg',0.78)); }; img.src=e.target.result; }; fr.readAsDataURL(file); }); }
+async function uploadMultiplePhotos(e){ const fs=Array.from(e.target.files); if(!fs.length) return; const p=getProj(), w=Number(document.getElementById('ph_week').value)||1, cap=document.getElementById('ph_caption').value.trim(); for(let i=0;i<fs.length;i++){ p.photos.push({id:Date.now()+i,week:w,caption:cap?`${cap} (${i+1})`:`ภาพประกอบ (${i+1})`,dataUrl:await compressImage(fs[i],900)}); } e.target.value=''; await saveStorage(`เพิ่มภาพ ${fs.length} รูป`); renderPhotos(); }
+async function uploadMap(e){ const f=e.target.files[0]; if(!f) return; getProj().mapImage=await compressImage(f,1000); await saveStorage('อัปโหลดแผนที่แล้ว'); renderPhotos(); }
+function renderPhotos(){ const p=getProj(); document.getElementById('photoGallery').innerHTML=p.photos.map((ph,i)=>`<div class="photo-card"><img src="${ph.dataUrl}"><div class="caption"><div style="display:flex;justify-content:space-between;"><b>สัปดาห์ ${ph.week}</b><button class="btn btn-danger btn-sm" onclick="getProj().photos=getProj().photos.filter(x=>x.id!==${ph.id});saveStorage();renderPhotos();">ลบ</button></div><input value="${ph.caption.replace(/"/g,'&quot;')}" onchange="getProj().photos[${i}].caption=this.value;saveStorage();"></div></div>`).join('')||'<p style="color:#64748b;">ยังไม่มีภาพถ่าย</p>'; document.getElementById('mapPreview').innerHTML=p.mapImage?`<img src="${p.mapImage}" style="max-width:360px;border:1px solid #ccc;">`:'<span style="color:#64748b;">ยังไม่ได้อัปโหลดแผนที่</span>'; }
+
+async function renderMemoryTab(){
+  const mb=(new Blob([JSON.stringify({projects,presets})]).size/1048576).toFixed(2); let txt=`ขนาดข้อมูล: <b>${mb} MB</b>`, pct=2;
+  if(!useFallback&&navigator.storage&&navigator.storage.estimate){ const est=await navigator.storage.estimate(); pct=Math.min(100,(est.usage/est.quota)*100).toFixed(2); txt=`ใช้พื้นที่ไปแล้ว <b>${(est.usage/1048576).toFixed(2)} MB</b> จากโควตา <b>${Number((est.quota/1048576).toFixed(0)).toLocaleString()} MB</b> — บันทึกไว้ <b>${projects.length} โครงการ</b>`; }
+  document.getElementById('memoryStats').innerHTML=txt; document.getElementById('memBarFill').style.width=Math.max(2,pct)+'%';
+  document.querySelector('#projectMemoryTable tbody').innerHTML=projects.map(p=>`<tr><td><b>${p.name}</b></td><td>${p.contractNo}</td><td>${p.weeks.length} สัปดาห์</td><td>${p.photos.length} รูป</td><td>${p.updatedAt||'-'}</td><td style="display:flex;gap:4px;"><button class="btn btn-primary btn-sm" onclick="switchProject('${p.id}');openTab('tab-info',document.querySelectorAll('nav.tabs button')[0]);">เปิด</button><button class="btn btn-outline btn-sm" onclick="duplicateProject('${p.id}')">คัดลอก</button><button class="btn btn-danger btn-sm" onclick="deleteProject('${p.id}')">ลบ</button></td></tr>`).join('');
+}
+
+// --- REPORTS (BLUE SIGN + NO DATE ON COMMITTEE MEMO SIGNATURES) ---
+function buildPage(type, p, weekNo){
+  const activeCom=p.committees.filter(c=>c.name.trim()!==''), chair=activeCom[0]||{name:'-',pos:''};
+  const wObj=p.weeks.find(w=>w.weekNo===weekNo)||p.weeks[0], days=wObj?.days||[];
+  const rawLast=days.length?days[days.length-1].date:p.startDate, memoDate=getNextWorkingDay(rawLast);
+  const effEnd=p.extendDate||p.endDate;
+  const totDays=Math.max(1, Math.round((new Date(effEnd)-new Date(p.startDate))/86400000)+1);
+  const diffEnd = Math.round((new Date(effEnd) - new Date(rawLast))/86400000);
+  const remain = Math.max(0, diffEnd), overdueDays = diffEnd < 0 ? Math.abs(diffEnd) : 0;
+  const accumPenalty = overdueDays * (Number(p.penalty)||0), remPct = ((remain/totDays)*100).toFixed(2);
+  const planPct = getWeekPlannedPct(p, wObj, rawLast);
+
+  const mIdx = Number(p.monthly.monthIdx ?? 8), mName = THAI_MONTHS[mIdx] || 'กันยายน', yBE = p.monthly.year || '2569';
+  const wSum = getWeekBoqSummary(p, weekNo), mSum = getMonthBoqSummary(p, mIdx, yBE), diffPct = mSum.totalAccM - planPct;
+
+  const timeStatusHtml = overdueDays > 0
+    ? `<b style="color:#dc2626;">เกินกำหนด ${overdueDays} วัน</b><br><span style="font-size:12.5pt;">(ค่าปรับสะสม ${accumPenalty.toLocaleString()} บ.)</span>`
+    : `<b>${remain} วัน</b> (${remPct}%)`;
+
+  if(type==='cover') return `<div class="a4-page" style="display:flex;flex-direction:column;justify-content:space-between;text-align:center;border:3px double #000;"><div style="margin-top:40px;font-size:26pt;font-weight:700;">รายงานการปฏิบัติงานของผู้รับจ้าง</div><div><div style="font-size:20pt;font-weight:700;">${p.name}</div><p>${p.scope}</p><p><b>สถานที่ก่อสร้าง</b><br>${p.location}</p></div><div style="margin-bottom:40px;font-size:19pt;font-weight:700;">เจ้าของโครงการ<br>${p.employer}</div></div>`;
+  if(type==='info') return `<div class="a4-page"><h3>1. ข้อมูลเกี่ยวกับงาน</h3><table><tr><td style="width:28%;">ผู้ว่าจ้าง</td><td>${p.employer}</td></tr><tr><td>ผู้ออกแบบ</td><td>${p.designer}</td></tr><tr><td>ผู้รับจ้าง</td><td>${p.contractor} (${p.contractorAddr})</td></tr><tr><td>ชื่อสัญญา</td><td>${p.name}</td></tr><tr><td>ปริมาณงาน</td><td>${p.scope}</td></tr><tr><td>สถานที่ก่อสร้าง</td><td>${p.location}</td></tr><tr><td>สัญญาเลขที่</td><td>${p.contractNo} ลงวันที่ ${formatThaiDate(p.contractDate)} (${formatThaiDate(p.startDate)} - ${formatThaiDate(p.endDate)})</td></tr>${p.extendDate?`<tr><td>การขยายสัญญา</td><td>บันทึกเลขที่ ${p.extendNo||'-'} ขยายถึงวันที่ ${formatThaiDate(p.extendDate)}</td></tr>`:''}<tr><td>คำสั่งแต่งตั้ง</td><td>เลขที่ ${p.orderNo||'-'} ลงวันที่ ${formatThaiDate(p.orderDate)}</td></tr><tr><td>ค่าก่อสร้าง</td><td>${p.budget.toLocaleString()} บาท (ค่าปรับวันละ ${p.penalty.toLocaleString()} บาท)</td></tr></table><p><b>คณะกรรมการตรวจรับพัสดุ</b></p><table>${activeCom.map((c,i)=>`<tr><td style="width:6%;">${i+1}.</td><td style="width:45%;">${c.name}</td><td>${c.role} (${c.pos})</td></tr>`).join('')}</table><p><b>ผู้ควบคุมงาน:</b> ${p.supervisor} (${p.supervisorPos}) &nbsp;&nbsp; <b>ผู้แทนผู้รับจ้าง:</b> ${p.contractorRep}</p></div>`;
+
+  if(type==='weekly_memo'||type==='monthly_memo'){
+    const isM = type==='monthly_memo', pct = isM ? mSum.totalAccM : wSum.totalAccW, st = pct>=100?'แล้วเสร็จ':(pct>=planPct?'ตามแผน':'ช้า');
+    return `
+    <div class="a4-page memo-single">
+      <div class="memo-header">${getGarudaHtml(p)}<div class="memo-title">บันทึกข้อความ</div></div>
+      <p style="margin:1px 0;"><span class="saraban-lbl">ส่วนราชการ</span> &nbsp; ผู้ควบคุมงาน (${p.employer})</p>
+      <div class="memo-row-2col">
+        <div class="memo-col-left"><span class="saraban-lbl">ที่</span> &nbsp; ............/${yBE}</div>
+        <div class="memo-col-right"><span class="saraban-lbl">วันที่</span> &nbsp; ${formatThaiDate(memoDate)}</div>
+      </div>
+      <p style="margin:1px 0; border-bottom:1.5px solid #000; padding-bottom:2px;"><span class="saraban-lbl">เรื่อง</span> &nbsp; ${isM?'รายงานผลการก่อสร้างประจำเดือน':'รายงานผลการก่อสร้างประจำสัปดาห์'}</p>
+      <p style="margin:4px 0 2px;"><b>เรียน</b> &nbsp; ประธานกรรมการตรวจรับพัสดุ (${chair.name} ตำแหน่ง ${chair.pos})</p>
+      <p style="margin:2px 0 3px;"><b>${isM?`รายงานประจำเดือน</b> &nbsp; ${mName} พ.ศ. ${yBE}`:`รายงานครั้งที่</b> &nbsp; ${weekNo} &nbsp;&nbsp; สัปดาห์ที่ ${weekNo} / ${yBE}`} &nbsp;&nbsp; <b>คำสั่งแต่งตั้งเลขที่</b> ${p.orderNo||'-'} ลงวันที่ ${formatThaiDate(p.orderDate)}</p>
+      <table>
+        <tr><td style="width:22%;"><b>งานก่อสร้าง</b></td><td>${p.name}</td></tr>
+        <tr><td><b>สถานที่</b></td><td>${p.location}</td></tr>
+        <tr><td><b>ปริมาณงาน</b></td><td>${p.scope}</td></tr>
+        <tr><td><b>สัญญาจ้างเลขที่</b></td><td>${p.contractNo} ลว. ${formatThaiDate(p.contractDate)} &nbsp; <b>สิ้นสุด</b> ${formatThaiDate(p.endDate)}${p.extendDate?` (ขยายถึง ${formatThaiDate(p.extendDate)})`:''}</td></tr>
+        <tr><td><b>ค่าก่อสร้าง</b></td><td>${p.budget.toLocaleString()} บาท &nbsp; <b>ผู้รับจ้าง</b> ${p.contractor}</td></tr>
+      </table>
+      <p style="margin:3px 0 1px;"><b>คณะกรรมการตรวจรับพัสดุ</b></p>
+      <div class="com-grid-2col">${activeCom.map((c,i)=>`<div>${i+1}. ${c.name} (${c.role})</div>`).join('')}</div>
+      <table class="bordered center">
+        <thead>
+          <tr><th colspan="3">การปฏิบัติงาน (แผน ${planPct.toFixed(1)}%)</th><th>เงินงบประมาณ / งวดงาน</th></tr>
+          <tr><th>% ผลงานปัจจุบัน</th><th>เร็ว / ช้า</th><th>ระยะเวลาคงเหลือ / ค่าปรับ</th><th>จำนวนงวดงาน</th></tr>
+        </thead>
+        <tbody><tr><td><b>${pct.toFixed(2)} %</b></td><td><b>${st}</b></td><td>${timeStatusHtml}</td><td><b>${p.installments.length} งวด</b></td></tr></tbody>
+      </table>
+      <p class="memo-indent">จึงเรียนมาเพื่อโปรดทราบ${p.accelNo&&p.accelNo!=='-'?` (แจ้งเร่งรัดงานแล้วตามหนังสือเลขที่ ${p.accelNo} ลว. ${formatThaiDate(p.accelDate)})`:''}</p>
+      <div class="memo-sig-right">(ลงชื่อ)....................................................ผู้ควบคุมงาน<br>( ${p.supervisor} )<br>ตำแหน่ง ${p.supervisorPos}</div>
+      <div style="margin-top:6px; border-top:1px dashed #666; padding-top:4px;">
+        <b>รายชื่อแจ้งท้ายคณะกรรมการตรวจรับพัสดุ (- ทราบ)</b>
+        <table style="margin-top:2px;">${activeCom.map((c,i)=>`<tr><td style="width:50%;padding:2px 0;">(ลงชื่อ)....................................................</td><td>${i+1}. ${c.name}</td></tr>`).join('')}</table>
+      </div>
+    </div>`;
+  }
+
+  if(type==='weekly_progress'||type==='monthly_progress'){
+    const isM = type==='monthly_progress', data = isM ? mSum : wSum, totalVal = isM ? mSum.totalAccM : wSum.totalAccW;
+    return `<div class="a4-page"><h3>${isM?`2. ผลการดำเนินงานประจำเดือน ${mName} พ.ศ. ${yBE}`:`ผลการดำเนินงานในสัปดาห์ที่ ${weekNo} / ${yBE}`}</h3><table class="bordered"><thead><tr class="center"><th rowspan="2" style="width:6%;">ที่</th><th rowspan="2">งานที่ดำเนินการ</th><th rowspan="2" style="width:12%;">สัดส่วน<br>งาน %</th><th colspan="3">ผลงาน %</th><th rowspan="2" style="width:12%;">ผลงานรวม<br>%</th></tr><tr class="center"><th>ถึง${isM?'เดือน':'สัปดาห์'}ก่อน</th><th>ใน${isM?'เดือน':'สัปดาห์'}</th><th>สะสม</th></tr></thead><tbody>${data.rows.map((x,i)=>`<tr><td class="center">${i+1}</td><td>${x.name}</td><td class="right">${x.weight.toFixed(2)}</td><td class="right">${x.prev.toFixed(2)}</td><td class="right">${(isM?x.inM:x.inW).toFixed(2)}</td><td class="right">${x.acc.toFixed(2)}</td><td class="right"><b>${x.weightedAcc.toFixed(2)}</b></td></tr>`).join('')}<tr><td colspan="2" class="center"><b>รวม</b></td><td class="right"><b>100.00</b></td><td colspan="3" class="center"><b>รวมผลงานทั้งหมด</b></td><td class="right"><b>${totalVal.toFixed(2)}</b></td></tr></tbody></table><div style="margin-top:14px;"><b>ปัญหา - อุปสรรค</b><br>${p.issues.length===0?'☑ ไม่มี &nbsp;&nbsp;&nbsp; ☐ มี':'☐ ไม่มี &nbsp;&nbsp;&nbsp; ☑ มี ดังนี้ '+p.issues.map(x=>x.desc).join(', ')}</div><div style="display:grid;grid-template-columns:1fr 1fr;text-align:center;margin-top:42px;"><div>(ลงชื่อ)....................................................<br>( ${p.supervisor} )<br>ผู้ควบคุมงาน</div><div>(ลงชื่อ)....................................................<br>( ${p.contractorRep} )<br>ผู้รับจ้าง / ผู้แทน</div></div></div>`;
+  }
+  if(type==='daily_log'){
+    const uM=[]; days.forEach(d=>{ if(d.machine&&d.machine!=='-'&&!uM.some(m=>m.name===d.machine)) uM.push({name:d.machine,qty:d.qty||'-'}); });
+    const toN=v=>isNaN(Number(v))?0:Number(v);
+    return `<div class="a4-page"><div class="doc-title" style="font-size:18pt;">บันทึกการปฏิบัติงานของผู้รับจ้าง สัปดาห์ที่ ${weekNo} / ${yBE}</div><table class="bordered"><thead><tr class="center"><th style="width:16%;">วัน/เดือน/ปี</th><th style="width:34%;">รายละเอียด</th><th style="width:14%;">ปริมาณงาน</th><th style="width:14%;">สภาพอากาศ</th><th style="width:22%;">คำสั่ง/ข้อเสนอแนะผู้คุมงาน</th></tr></thead><tbody>${days.map(d=>`<tr><td class="center">${formatThaiDate(d.date)}</td><td>${d.work}</td><td class="center">${d.volume||'-'}</td><td class="center">${d.weather}</td><td>${d.order||'-'}</td></tr>`).join('')}</tbody></table><p style="margin:10px 0 4px;"><b>รายชื่อวัสดุอุปกรณ์ / เครื่องจักร</b></p><table class="bordered"><tbody>${(uM.length?uM:[{name:'-',qty:'-'}]).map((m,i)=>`<tr><td style="width:65%;">${i+1}. ${m.name}</td><td class="center" style="width:15%;">จำนวน</td><td class="center" style="width:10%;">${m.qty}</td><td class="center" style="width:10%;">คัน</td></tr>`).join('')}</tbody></table><p style="margin:10px 0 4px;"><b>บัญชีแสดงจำนวนแรงงาน</b></p><table class="bordered center"><thead><tr><th style="width:22%;">วันที่</th>${days.map(d=>`<th>${formatShortDate(d.date)}</th>`).join('')}</tr></thead><tbody><tr><td style="text-align:left;">หัวหน้าคนงาน</td>${days.map(d=>`<td>${d.foreman}</td>`).join('')}</tr><tr><td style="text-align:left;">ช่าง</td>${days.map(d=>`<td>${d.tech}</td>`).join('')}</tr><tr><td style="text-align:left;">กรรมกร</td>${days.map(d=>`<td>${d.labor}</td>`).join('')}</tr><tr><td style="text-align:left;"><b>รวม</b></td>${days.map(d=>`<td><b>${(toN(d.foreman)+toN(d.tech)+toN(d.labor))||'-'}</b></td>`).join('')}</tr></tbody></table><div style="display:grid;grid-template-columns:1fr 1fr;text-align:center;margin-top:28px;"><div>(ลงชื่อ)....................................................<br>( ${p.supervisor} )<br>ผู้ควบคุมงาน</div><div>(ลงชื่อ)....................................................<br>( ${p.contractorRep} )<br>ผู้รับจ้าง / ผู้แทน</div></div></div>`;
+  }
+  if(type==='installments') return `<div class="a4-page"><h3>3. รายละเอียดงวดงานและการตรวจรับงาน</h3><table class="bordered center"><thead><tr><th>งวดที่</th><th>จำนวนเงิน (บาท)</th><th>วันที่แล้วเสร็จ</th><th>วันที่ตรวจรับ</th></tr></thead><tbody>${p.installments.map(x=>`<tr><td>${x.no}</td><td class="right">${x.amt.toLocaleString()}</td><td>${formatThaiDate(x.done)}</td><td>${formatThaiDate(x.inspect)}</td></tr>`).join('')}</tbody></table></div>`;
+  if(type==='tests') return `<div class="a4-page"><h3>4. ผลการทดสอบ / ขออนุมัติใช้วัสดุ</h3><p><b>4.1 การทดสอบวัสดุ</b></p><table class="bordered"><thead><tr class="center"><th>รายการทดสอบ</th><th>จำนวน</th><th>วันที่</th><th>หน่วยงาน</th><th>เลขที่ใบผลทดสอบ</th><th>ผล</th></tr></thead><tbody>${p.tests.map(t=>`<tr><td>${t.item}</td><td class="center">${t.qty}</td><td>${formatThaiDate(t.date)}</td><td>${t.lab}</td><td class="center">${t.refNo||'-'}</td><td class="center"><b>${t.res}</b></td></tr>`).join('')}</tbody></table><p style="margin-top:14px;"><b>4.2 การขออนุมัติใช้วัสดุ</b></p><table class="bordered"><thead><tr class="center"><th>รายการขออนุมัติ</th><th>วันที่</th><th>ผู้พิจารณา</th><th>ผล</th></tr></thead><tbody>${p.approvals.map(a=>`<tr><td>${a.item}</td><td>${formatThaiDate(a.date)}</td><td>${a.by}</td><td class="center"><b>${a.res}</b></td></tr>`).join('')}</tbody></table></div>`;
+  if(type==='issues') return `<div class="a4-page"><h3>5. ปัญหา / อุปสรรคในการก่อสร้าง</h3><p>${p.issues.length===0?'☑ ไม่มี &nbsp;&nbsp; ☐ มี':'☐ ไม่มี &nbsp;&nbsp; ☑ มี ดังนี้'}</p><table class="bordered"><thead><tr class="center"><th style="width:8%;">ที่</th><th>ปัญหา - อุปสรรค - การแก้ไข</th><th style="width:28%;">หมายเหตุ</th></tr></thead><tbody>${p.issues.map((is,i)=>`<tr><td class="center">${i+1}</td><td>${is.desc}</td><td>${is.action}</td></tr>`).join('')||'<tr><td colspan="3" class="center">- ไม่มี -</td></tr>'}</tbody></table><h3 style="margin-top:20px;">6. สรุปผลการดำเนินงานถึงปัจจุบัน</h3><table><tr><td style="width:55%;">6.1 ผลการก่อสร้างประจำเดือน (${mName})</td><td><b>${mSum.totalInM.toFixed(2)} %</b></td></tr><tr><td>6.2 ผลการก่อสร้างรวมถึงปัจจุบัน</td><td><b>${mSum.totalAccM.toFixed(2)} %</b></td></tr><tr><td>6.3 ผลการก่อสร้างตามแผน</td><td><b>${planPct.toFixed(2)} %</b></td></tr><tr><td>6.4 สถานะ</td><td><b>${diffPct>=0?'เร็วกว่าแผน':'ช้ากว่าแผน'} (${Math.abs(diffPct).toFixed(2)} %)</b></td></tr><tr><td>6.5 ระยะเวลาคงเหลือ / ค่าปรับสะสม</td><td>${timeStatusHtml}</td></tr></table><div class="memo-sig-right" style="margin-top:34px;">(ลงชื่อ)....................................ผู้ควบคุมงาน<br>( ${p.supervisor} )<br>${p.supervisorPos}</div></div>`;
+  if(type==='photos') return `<div class="a4-page"><div class="doc-title" style="font-size:19pt;">รูปถ่ายผลงาน สัปดาห์ที่ ${weekNo} / ${yBE}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">${p.photos.filter(x=>x.week===weekNo).map((ph,i)=>`<div style="border:1px solid #000;padding:6px;text-align:center;"><img src="${ph.dataUrl}" style="width:100%;height:165px;object-fit:cover;"><div style="font-size:14pt;">ภาพที่ ${i+1}: ${ph.caption}</div></div>`).join('')||'<p style="grid-column:1/-1;text-align:center;">ยังไม่มีภาพถ่ายในสัปดาห์นี้</p>'}</div><div style="border-top:1px solid #000;padding-top:8px;font-size:15pt;"><p style="margin:2px 0;"><b>ขอรับรองว่าเป็นภาพถ่าย:</b> ${p.name}</p><p style="margin:2px 0 10px;"><b>สถานที่ดำเนินการ:</b> ${p.location}</p><table><tr><td style="width:52%;padding:5px 0;">(ลงชื่อ).................................................... ผู้ควบคุมงาน</td><td>( ${p.supervisor} ) ตำแหน่ง ${p.supervisorPos}</td></tr>${activeCom.map((c,i)=>`<tr><td style="padding:5px 0;">(ลงชื่อ).................................................... ${c.role}</td><td>${i+1}. ${c.name}</td></tr>`).join('')}</table></div></div>`;
+  if(type==='map') return `<div class="a4-page"><div class="doc-title">แผนที่แสดงที่ตั้งโครงการ</div><div style="border:1px solid #000;min-height:140mm;display:flex;align-items:center;justify-content:center;">${p.mapImage?`<img src="${p.mapImage}" style="max-width:100%;max-height:135mm;">`:'พื้นที่ติดแผนที่สังเขป'}</div><p><b>สถานที่:</b> ${p.location}</p></div>`;
+  if(type==='signs') return `<div class="a4-page"><div class="blue-sign"><div class="center" style="font-size:20pt;font-weight:700;margin-bottom:8px;">โครงการก่อสร้างของ ${p.employer}</div><table><tr><td style="width:26%;"><b>ชื่อโครงการ</b></td><td>${p.name}</td></tr><tr><td><b>ปริมาณงาน</b></td><td>${p.scope}</td></tr><tr><td><b>งบประมาณ</b></td><td>${p.budget.toLocaleString()} บาท</td></tr><tr><td><b>ระยะเวลาสัญญา</b></td><td>${formatThaiDate(p.startDate)} ถึง ${formatThaiDate(p.endDate)}</td></tr><tr><td><b>ผู้รับจ้าง</b></td><td>${p.contractor}</td></tr><tr><td><b>ผู้ควบคุมงาน</b></td><td>${p.supervisor} (${p.supervisorPos})</td></tr><tr><td><b>คณะกรรมการตรวจรับฯ</b></td><td>${activeCom.map((c,i)=>`${i+1}. ${c.name} (${c.role})`).join('<br>')}</td></tr></table><div class="center" style="margin-top:12px;font-weight:700;font-size:17pt;">"ก่อสร้างด้วยเงินภาษีอากรของประชาชน"</div></div></div>`;
+  return '';
+}
+
+function renderReport(){
+  const p=getProj(), type=document.getElementById('reportType').value, week=Number(document.getElementById('reportWeek').value)||1; let html='';
+  if(type==='bundle_all'){ html+=buildPage('cover',p,week)+buildPage('info',p,week); p.weeks.forEach(w=>{ html+=buildPage('weekly_memo',p,w.weekNo)+buildPage('weekly_progress',p,w.weekNo)+buildPage('daily_log',p,w.weekNo); if(p.photos.some(ph=>ph.week===w.weekNo)) html+=buildPage('photos',p,w.weekNo); }); ['monthly_memo','monthly_progress','installments','tests','issues','map','signs'].forEach(t=>html+=buildPage(t,p,week)); }
+  else if(type==='bundle_all_weeks'){ p.weeks.forEach(w=>{ html+=buildPage('weekly_memo',p,w.weekNo)+buildPage('weekly_progress',p,w.weekNo)+buildPage('daily_log',p,w.weekNo); if(p.photos.some(ph=>ph.week===w.weekNo)) html+=buildPage('photos',p,w.weekNo); }); }
+  else if(type==='bundle_monthly'){ ['cover','info','monthly_memo','monthly_progress','installments','tests','issues','map'].forEach(t=>html+=buildPage(t,p,week)); }
+  else if(type==='bundle_weekly'){ ['weekly_memo','weekly_progress','daily_log','photos'].forEach(t=>html+=buildPage(t,p,week)); }
+  else html=buildPage(type,p,week);
+  document.getElementById('reportContainer').innerHTML=html;
+}
+
+function exportToWord(){
+  const html=document.getElementById('reportContainer').innerHTML;
+  const hdr=`<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><style>@page{size:A4;margin:1.5cm 2cm 1.5cm 3cm;} body{font-family:'TH Sarabun New',sans-serif;font-size:15pt;} table{border-collapse:collapse;width:100%;} td,th{border:1px solid #000;padding:3px;} .blue-sign{background:#1e3a8a;color:#fff;padding:14px;}</style></head><body>`;
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob(['\ufeff',hdr+html+'</body></html>'],{type:'application/msword'})); a.download=`รายงานช่าง_V8_1.doc`; a.click();
+}
+function exportJSON(){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify({projects,presets},null,2)],{type:'application/json'})); a.download=`backup_site_v8_1.json`; a.click(); }
+function importJSON(e){ const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=async ev=>{ try{ const d=JSON.parse(ev.target.result); if(Array.isArray(d)) projects=d; else { if(d.projects) projects=d.projects; if(d.presets) presets={...DEFAULT_PRESETS,...d.presets}; } currentProjectId=projects[0].id; await saveStorage('นำเข้า JSON แล้ว'); renderProjectSelector(); renderPresetDropdowns(); loadProjectUI(); renderMemoryTab(); }catch{ alert('ไฟล์ JSON ไม่ถูกต้อง'); } }; r.readAsText(f); }
+init();
+</script>
+</body>
+</html>
