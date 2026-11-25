@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ระบบรายงานผู้ควบคุมงานก่อสร้าง V8.1</title>
+<title>ระบบรายงานผู้ควบคุมงานก่อสร้าง V8.2 (Cloud Sync)</title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root, [data-theme="ocean"] {
@@ -43,15 +43,9 @@
   body { margin: 0; font-family: 'Sarabun', 'TH Sarabun New', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; transition: background 0.25s, color 0.25s; }
 
   /* Password Lock Screen */
-  #authOverlay {
-    position: fixed; inset: 0; z-index: 9999; background: var(--hdr-bg);
-    display: flex; align-items: center; justify-content: center; padding: 20px;
-  }
+  #authOverlay { position: fixed; inset: 0; z-index: 9999; background: var(--hdr-bg); display: flex; align-items: center; justify-content: center; padding: 20px; }
   #authOverlay.hidden { display: none; }
-  .auth-card {
-    background: #fff; width: 100%; max-width: 390px; border-radius: 16px;
-    padding: 28px 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.28); text-align: center;
-  }
+  .auth-card { background: #fff; width: 100%; max-width: 390px; border-radius: 16px; padding: 28px 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.28); text-align: center; }
   .auth-icon { font-size: 44px; margin-bottom: 8px; }
   .auth-card h2 { margin: 0 0 6px; font-size: 19px; color: var(--primary); }
   .auth-card p { margin: 0 0 18px; color: var(--muted); font-size: 13.5px; }
@@ -248,7 +242,7 @@
 <div id="appShell" class="locked">
 <header class="no-print">
   <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-    <h1>🏗️ ระบบรายงานผู้ควบคุมงาน V8.1</h1>
+    <h1>🏗️ ระบบรายงานผู้ควบคุมงาน V8.2</h1>
     <span class="save-status" id="saveStatus">กำลังโหลด...</span>
   </div>
   <div class="header-actions">
@@ -275,7 +269,7 @@
   <button data-color="amber" onclick="openTab('tab-other', this)">📊 4. รายเดือน / ทดสอบ / ปัญหา</button>
   <button data-color="rose" onclick="openTab('tab-photos', this)">📷 5. ภาพถ่าย & แผนที่</button>
   <button data-color="purple" onclick="openTab('tab-report', this)">🖨️ 6. ออกเอกสาร & ตรวจ สตง.</button>
-  <button data-color="slate" onclick="openTab('tab-memory', this)">💾 หน่วยความจำ & รหัสผ่าน</button>
+  <button data-color="slate" onclick="openTab('tab-memory', this)">💾 หน่วยความจำ & คลาวด์</button>
 </nav>
 
 <main>
@@ -654,8 +648,26 @@
     <div id="reportContainer"></div>
   </section>
 
-  <!-- TAB 7: MEMORY & PASSWORD -->
+  <!-- TAB 7: CLOUD SYNC & MEMORY & PASSWORD -->
   <section id="tab-memory" class="tab-panel">
+    <div class="card">
+      <h2>☁️ ซิงก์ข้อมูลข้ามเครื่องอัตโนมัติ (Google Drive)</h2>
+      <div class="grid-3" style="margin-bottom:8px;">
+        <div class="field" style="grid-column:span 2;">
+          <label>ลิงก์ Google Apps Script Web App (/exec)</label>
+          <input id="cloudUrlInput" placeholder="https://script.google.com/macros/s/.../exec">
+        </div>
+        <div style="display:flex; align-items:flex-end; gap:6px; flex-wrap:wrap;">
+          <button type="button" class="btn btn-primary btn-sm" onclick="saveCloudUrl()">💾 บันทึกลิงก์</button>
+          <button type="button" class="btn btn-sky btn-sm" onclick="manualCloudPull()">🔄 ดึงข้อมูลล่าสุด</button>
+          <button type="button" class="btn btn-success btn-sm" onclick="syncToCloud(true)">☁️ ส่งขึ้นคลาวด์ทันที</button>
+        </div>
+      </div>
+      <div style="font-size:12.5px; color:var(--muted);">
+        💡 หากวางลิงก์ไว้ในโค้ด <code>CLOUD_SYNC_URL</code> ก่อนอัปโหลดขึ้น GitHub Pages ทุกเครื่องจะซิงก์ข้อมูลอัตโนมัติทันทีโดยไม่ต้องกรอกลิงก์ใหม่
+      </div>
+    </div>
+
     <div class="card">
       <h2>🔐 ตั้งค่ารหัสผ่านเข้าใช้งานโปรแกรม</h2>
       <div class="grid-3">
@@ -665,9 +677,6 @@
           <button type="button" class="btn btn-primary" onclick="changePassword()">💾 เปลี่ยนรหัสผ่าน</button>
           <button type="button" class="btn btn-danger btn-sm" onclick="lockApp()">🔒 ล็อกหน้าจอทันที</button>
         </div>
-      </div>
-      <div style="margin-top:6px; font-size:12.5px; color:var(--muted);">
-        💡 หากต้องการเปลี่ยนรหัสผ่านเริ่มต้นสำหรับทุกคนที่เปิดผ่านเว็บไซต์ ให้แก้ไขค่า <code>const DEFAULT_PASS = '4321';</code> ในไฟล์ HTML ก่อนอัปโหลดขึ้นเว็บ
       </div>
     </div>
 
@@ -755,22 +764,89 @@
 </div>
 
 <script>
-// --- PASSWORD AUTH SYSTEM (เปลี่ยนรหัสผ่านเริ่มต้นตรงนี้ก่อนอัปโหลดขึ้นเว็บ) ---
-const DEFAULT_PASS = '4321';
+// =========================================================================
+// ตั้งค่ารหัสผ่านเริ่มต้น และ ลิงก์ Google Apps Script (/exec) ตรงนี้ก่อนอัปโหลดขึ้นเว็บ
+// =========================================================================
+const DEFAULT_PASS = '1234';
+const CLOUD_SYNC_URL = 'https://script.google.com/macros/s/AKfycbw2OSl5gQNY6HmWh-wTpTGqk5adTWzgqLCwq413qr6sov9U9qhwnCcRa-9dfyeW7_xn/exec';
+// =========================================================================
+
 const PASS_STORAGE_KEY = 'smart_site_app_pass_v8';
 const AUTH_SESSION_KEY = 'smart_site_authed_v8';
+const CLOUD_URL_KEY = 'smart_site_cloud_url_v8';
 
-function getCurrentPass() {
-  try { return localStorage.getItem(PASS_STORAGE_KEY) || DEFAULT_PASS; } catch { return DEFAULT_PASS; }
-}
-function checkAuthOnLoad() {
+function getCloudUrl() {
   try {
-    if (sessionStorage.getItem(AUTH_SESSION_KEY) === '1') {
-      document.getElementById('authOverlay').classList.add('hidden');
-      document.getElementById('appShell').classList.remove('locked');
-      return;
-    }
+    const saved = localStorage.getItem(CLOUD_URL_KEY);
+    if (saved && saved.startsWith('http')) return saved;
   } catch {}
+  return (CLOUD_SYNC_URL && CLOUD_SYNC_URL.startsWith('http')) ? CLOUD_SYNC_URL : '';
+}
+function saveCloudUrl() {
+  const val = document.getElementById('cloudUrlInput').value.trim();
+  try { localStorage.setItem(CLOUD_URL_KEY, val); } catch {}
+  alert('✅ บันทึกลิงก์คลาวด์แล้ว กดปุ่ม "ดึงข้อมูลล่าสุด" หรือ "ส่งขึ้นคลาวด์ทันที" เพื่อทดสอบได้เลยครับ');
+}
+
+async function syncFromCloud() {
+  const url = getCloudUrl();
+  if (!url) return false;
+  try {
+    document.getElementById('saveStatus').textContent = '⏳ กำลังดึงข้อมูลล่าสุดจากคลาวด์...';
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data && Array.isArray(data.projects) && data.projects.length > 0) {
+      projects = data.projects;
+      if (data.presets) presets = { ...DEFAULT_PRESETS, ...data.presets };
+      await dbSet('projects', projects);
+      await dbSet('presets', presets);
+      document.getElementById('saveStatus').textContent = `☁️ ดึงข้อมูลล่าสุดแล้ว (${new Date().toLocaleTimeString('th-TH')})`;
+      return true;
+    }
+  } catch (err) {
+    console.warn('Cloud pull failed:', err);
+  }
+  return false;
+}
+
+async function manualCloudPull() {
+  const ok = await syncFromCloud();
+  if (ok) {
+    currentProjectId = projects[0]?.id || '';
+    renderProjectSelector(); renderPresetDropdowns(); loadProjectUI(); renderMemoryTab();
+    alert('✅ ดึงข้อมูลล่าสุดจาก Google Drive สำเร็จแล้ว!');
+  } else {
+    alert('ยังไม่มีข้อมูลบนคลาวด์ หรือลิงก์ /exec ไม่ถูกต้อง');
+  }
+}
+
+let cloudPushTimer = null;
+function syncToCloud(immediate = false) {
+  const url = getCloudUrl();
+  if (!url) { if (immediate) alert('กรุณาวางลิงก์ /exec ก่อนครับ'); return; }
+  const doPush = async () => {
+    try {
+      document.getElementById('saveStatus').textContent = '☁️ กำลังซิงก์ขึ้น Google Drive...';
+      await fetch(url, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ projects, presets, updatedAt: new Date().toISOString() })
+      });
+      document.getElementById('saveStatus').textContent = `☁️ ซิงก์ข้อมูลล่าสุดแล้ว (${new Date().toLocaleTimeString('th-TH')})`;
+      if (immediate) alert('✅ ส่งข้อมูลล่าสุดขึ้น Google Drive เรียบร้อยแล้ว!');
+    } catch (err) {
+      console.warn('Cloud push failed:', err);
+      if (immediate) alert('ไม่สามารถเชื่อมต่อ Google Drive ได้');
+    }
+  };
+  if (immediate) { doPush(); }
+  else { clearTimeout(cloudPushTimer); cloudPushTimer = setTimeout(doPush, 1200); }
+}
+
+function getCurrentPass() { try { return localStorage.getItem(PASS_STORAGE_KEY) || DEFAULT_PASS; } catch { return DEFAULT_PASS; } }
+function checkAuthOnLoad() {
+  try { if (sessionStorage.getItem(AUTH_SESSION_KEY) === '1') { document.getElementById('authOverlay').classList.add('hidden'); document.getElementById('appShell').classList.remove('locked'); return; } } catch {}
   document.getElementById('authPassInput').focus();
 }
 function checkLogin() {
@@ -794,13 +870,11 @@ function lockApp() {
   document.getElementById('authPassInput').focus();
 }
 function changePassword() {
-  const oldPw = document.getElementById('pw_old').value;
-  const newPw = document.getElementById('pw_new').value.trim();
+  const oldPw = document.getElementById('pw_old').value, newPw = document.getElementById('pw_new').value.trim();
   if (oldPw !== getCurrentPass()) return alert('รหัสผ่านเดิมไม่ถูกต้อง');
   if (newPw.length < 4) return alert('รหัสผ่านใหม่ต้องมีอย่างน้อย 4 ตัวอักษร');
   try { localStorage.setItem(PASS_STORAGE_KEY, newPw); } catch {}
-  document.getElementById('pw_old').value = '';
-  document.getElementById('pw_new').value = '';
+  document.getElementById('pw_old').value = ''; document.getElementById('pw_new').value = '';
   alert('✅ เปลี่ยนรหัสผ่านเรียบร้อยแล้ว');
 }
 
@@ -1079,16 +1153,20 @@ let projects=[], presets=JSON.parse(JSON.stringify(DEFAULT_PRESETS)), currentPro
 async function init() {
   checkAuthOnLoad();
   await openDB();
-  const sp=await dbGet('projects'), spr=await dbGet('presets');
-  if(spr){
-    presets={...DEFAULT_PRESETS,...spr};
-    presets.machine=Array.from(new Set([...DEFAULT_PRESETS.machine,...(spr.machine||[])]));
-    presets.testItem=Array.from(new Set([...DEFAULT_PRESETS.testItem,...(spr.testItem||[])]));
-    presets.lab=Array.from(new Set([...DEFAULT_PRESETS.lab,...(spr.lab||[])]));
-    presets.testRes=Array.from(new Set([...DEFAULT_PRESETS.testRes,...(spr.testRes||[])]));
-    presets.order=Array.from(new Set([...DEFAULT_PRESETS.order,...(spr.order||[])]));
+  const cloudSynced = await syncFromCloud();
+  if (!cloudSynced) {
+    const sp=await dbGet('projects'), spr=await dbGet('presets');
+    if(spr){
+      presets={...DEFAULT_PRESETS,...spr};
+      presets.machine=Array.from(new Set([...DEFAULT_PRESETS.machine,...(spr.machine||[])]));
+      presets.testItem=Array.from(new Set([...DEFAULT_PRESETS.testItem,...(spr.testItem||[])]));
+      presets.lab=Array.from(new Set([...DEFAULT_PRESETS.lab,...(spr.lab||[])]));
+      presets.testRes=Array.from(new Set([...DEFAULT_PRESETS.testRes,...(spr.testRes||[])]));
+      presets.order=Array.from(new Set([...DEFAULT_PRESETS.order,...(spr.order||[])]));
+    }
+    if(sp&&Array.isArray(sp)&&sp.length>0) projects=sp; else { projects=JSON.parse(JSON.stringify(DEFAULT_DATA)); await dbSet('projects',projects); }
+    document.getElementById('saveStatus').textContent=useFallback?'✓ พร้อมใช้งาน (LocalStorage)':'✓ พร้อมใช้งาน (IndexedDB)';
   }
-  if(sp&&Array.isArray(sp)&&sp.length>0) projects=sp; else { projects=JSON.parse(JSON.stringify(DEFAULT_DATA)); await dbSet('projects',projects); }
   projects.forEach(p => {
     if (!p.monthly) p.monthly = { monthIdx: 8, year: '2569' };
     if (p.monthly.monthIdx === undefined) { const idx = THAI_MONTHS.indexOf(p.monthly.month); p.monthly.monthIdx = idx >= 0 ? idx : 8; }
@@ -1096,11 +1174,17 @@ async function init() {
   });
   await dbSet('presets',presets);
   currentProjectId=projects[0]?.id||'';
-  document.getElementById('saveStatus').textContent=useFallback?'✓ พร้อมใช้งาน (LocalStorage)':'✓ พร้อมใช้งาน (IndexedDB)';
+  const cInp = document.getElementById('cloudUrlInput');
+  if (cInp) cInp.value = getCloudUrl();
   renderProjectSelector(); renderPresetDropdowns(); loadProjectUI();
 }
-async function saveStorage(msg='บันทึกอัตโนมัติแล้ว'){ const p=getProj(); if(p) p.updatedAt=new Date().toLocaleString('th-TH'); await dbSet('projects',projects); await dbSet('presets',presets); document.getElementById('saveStatus').textContent=`✓ ${msg} (${new Date().toLocaleTimeString('th-TH')})`; }
-function manualSave(){ saveStorage('บันทึกโครงการแล้ว'); renderMemoryTab(); }
+async function saveStorage(msg='บันทึกอัตโนมัติแล้ว'){
+  const p=getProj(); if(p) p.updatedAt=new Date().toLocaleString('th-TH');
+  await dbSet('projects',projects); await dbSet('presets',presets);
+  document.getElementById('saveStatus').textContent=`✓ ${msg} (${new Date().toLocaleTimeString('th-TH')})`;
+  syncToCloud(false);
+}
+function manualSave(){ saveStorage('บันทึกโครงการแล้ว'); syncToCloud(true); renderMemoryTab(); }
 function getProj(){ return projects.find(p=>p.id===currentProjectId)||projects[0]; }
 function mkOpts(arr){ return `<option value="">-- เลือก --</option>`+(arr||[]).map(o=>`<option value="${o.replace(/"/g,'&quot;')}">${o}</option>`).join(''); }
 
@@ -1291,7 +1375,7 @@ async function renderMemoryTab(){
   document.querySelector('#projectMemoryTable tbody').innerHTML=projects.map(p=>`<tr><td><b>${p.name}</b></td><td>${p.contractNo}</td><td>${p.weeks.length} สัปดาห์</td><td>${p.photos.length} รูป</td><td>${p.updatedAt||'-'}</td><td style="display:flex;gap:4px;"><button class="btn btn-primary btn-sm" onclick="switchProject('${p.id}');openTab('tab-info',document.querySelectorAll('nav.tabs button')[0]);">เปิด</button><button class="btn btn-outline btn-sm" onclick="duplicateProject('${p.id}')">คัดลอก</button><button class="btn btn-danger btn-sm" onclick="deleteProject('${p.id}')">ลบ</button></td></tr>`).join('');
 }
 
-// --- REPORTS (BLUE SIGN + NO DATE ON COMMITTEE MEMO SIGNATURES) ---
+// --- REPORTS ---
 function buildPage(type, p, weekNo){
   const activeCom=p.committees.filter(c=>c.name.trim()!==''), chair=activeCom[0]||{name:'-',pos:''};
   const wObj=p.weeks.find(w=>w.weekNo===weekNo)||p.weeks[0], days=wObj?.days||[];
@@ -1382,9 +1466,9 @@ function renderReport(){
 function exportToWord(){
   const html=document.getElementById('reportContainer').innerHTML;
   const hdr=`<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><style>@page{size:A4;margin:1.5cm 2cm 1.5cm 3cm;} body{font-family:'TH Sarabun New',sans-serif;font-size:15pt;} table{border-collapse:collapse;width:100%;} td,th{border:1px solid #000;padding:3px;} .blue-sign{background:#1e3a8a;color:#fff;padding:14px;}</style></head><body>`;
-  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob(['\ufeff',hdr+html+'</body></html>'],{type:'application/msword'})); a.download=`รายงานช่าง_V8_1.doc`; a.click();
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob(['\ufeff',hdr+html+'</body></html>'],{type:'application/msword'})); a.download=`รายงานช่าง_V8_2.doc`; a.click();
 }
-function exportJSON(){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify({projects,presets},null,2)],{type:'application/json'})); a.download=`backup_site_v8_1.json`; a.click(); }
+function exportJSON(){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify({projects,presets},null,2)],{type:'application/json'})); a.download=`backup_site_v8_2.json`; a.click(); }
 function importJSON(e){ const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=async ev=>{ try{ const d=JSON.parse(ev.target.result); if(Array.isArray(d)) projects=d; else { if(d.projects) projects=d.projects; if(d.presets) presets={...DEFAULT_PRESETS,...d.presets}; } currentProjectId=projects[0].id; await saveStorage('นำเข้า JSON แล้ว'); renderProjectSelector(); renderPresetDropdowns(); loadProjectUI(); renderMemoryTab(); }catch{ alert('ไฟล์ JSON ไม่ถูกต้อง'); } }; r.readAsText(f); }
 init();
 </script>
